@@ -1,24 +1,87 @@
-# Compiled class file
+############################
+# Java
+############################
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
-*.nar
 *.ear
+*.nar
 *.zip
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# Arquivos temporarios
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Diretorios de build
+target/
+build/
+out/
+
+############################
+# Maven
+############################
+.mvn/
+!/.mvn/wrapper/maven-wrapper.jar
+mvnw
+mvnw.cmd
+
+############################
+# Gradle
+############################
+.gradle/
+**/build/
+gradle-app.setting
+
+############################
+# IntelliJ
+############################
+.idea/
+*.iml
+*.iws
+
+############################
+# VS Code
+############################
+.vscode/
+
+############################
+# Sistema operacional
+############################
+.DS_Store
+Thumbs.db
+
+
+############################
+# NetBeans
+############################
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+############################
+# STS
+############################
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+####### SECRETS ##############
+*.env
+keys/
+*.pem
+
+#### AI Agents rules
+GEMINI.md
