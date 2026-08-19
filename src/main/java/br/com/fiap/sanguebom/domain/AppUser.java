@@ -69,9 +69,6 @@ public class AppUser {
     private Set<Exam> userExams = new HashSet<>();
 
     @OneToMany(mappedBy = "user")
-    private Set<BloodPressure> userBloodPressures = new HashSet<>();
-
-    @OneToMany(mappedBy = "user")
     private Set<RiskAssessment> userRiskAssessments = new HashSet<>();
 
     @OneToMany(mappedBy = "user")

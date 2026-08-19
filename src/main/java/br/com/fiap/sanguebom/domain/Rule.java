@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,11 +21,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
-@Table(name = "BloodPressures")
+@Table(name = "Rules")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
-public class BloodPressure {
+public class Rule {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -40,27 +41,39 @@ public class BloodPressure {
     )
     private Long id;
 
-    @Column
-    private OffsetDateTime measuredAt;
+    @Column(precision = 12, scale = 4)
+    private BigDecimal minValue;
+
+    @Column(precision = 12, scale = 4)
+    private BigDecimal maxValue;
 
     @Column
-    private Integer systolic;
+    private Boolean minInclusive;
 
     @Column
-    private Integer diastolic;
+    private Boolean maxInclusive;
+
+    @Column(length = 30)
+    private String level;
+
+    @Column(precision = 4, scale = 2)
+    private BigDecimal score;
+
+    @Column(length = 500)
+    private String description;
+
+    @Column(length = 30)
+    private String version;
 
     @Column
-    private Integer pulse;
-
-    @Column(length = 50)
-    private String context;
+    private Boolean active;
 
     @Column
     private OffsetDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private AppUser user;
+    @JoinColumn(name = "reference_range_id")
+    private ReferenceRange referenceRange;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
