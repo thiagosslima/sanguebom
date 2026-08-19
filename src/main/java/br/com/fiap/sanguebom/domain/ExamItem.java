@@ -61,11 +61,11 @@ public class ExamItem {
     @Column
     private OffsetDateTime createdAt;
 
-    @OneToMany(mappedBy = "analyte")
-    private Set<ReferenceRange> analyteReferenceRanges = new HashSet<>();
-
     @OneToMany(mappedBy = "examItem")
     private Set<ExamResult> examItemExamResults = new HashSet<>();
+
+    @OneToMany(mappedBy = "examItem")
+    private Set<ReferenceRange> examItemReferenceRanges = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

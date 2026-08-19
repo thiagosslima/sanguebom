@@ -44,11 +44,11 @@ public class UserAchievement {
     private OffsetDateTime earnedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "achievement_id")
+    @JoinColumn(name = "achievement_id", nullable = false)
     private Achievement achievement;
 
     @CreatedDate

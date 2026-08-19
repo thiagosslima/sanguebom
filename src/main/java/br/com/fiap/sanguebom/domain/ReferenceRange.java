@@ -9,11 +9,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
@@ -51,12 +54,6 @@ public class ReferenceRange {
     @Column(precision = 5, scale = 2)
     private BigDecimal ageMaxYears;
 
-    @Column(precision = 12, scale = 4)
-    private BigDecimal minValue;
-
-    @Column(precision = 12, scale = 4)
-    private BigDecimal maxValue;
-
     @Column(length = 30)
     private String version;
 
@@ -73,8 +70,11 @@ public class ReferenceRange {
     private OffsetDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "analyte_id")
-    private ExamItem analyte;
+    @JoinColumn(name = "exam_item_id")
+    private ExamItem examItem;
+
+    @OneToMany(mappedBy = "referenceRange")
+    private Set<Rule> referenceRangeRules = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

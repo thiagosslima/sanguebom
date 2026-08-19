@@ -4,13 +4,6 @@ services:
     environment:
     - POSTGRES_DB=sanguebom
     - POSTGRES_USER=postgres
-    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    - POSTGRES_PASSWORD=P4ssword!
     ports:
-    - "${DB_PORT}:5432"
-    networks:
-      - sanguebom-network
-    env_file:
-      - .env
-networks:
-  sanguebom-network:
-    driver: bridge
+    - 5433:5432

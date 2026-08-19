@@ -53,6 +53,9 @@ public class HealthProfile {
     @Column(columnDefinition = "text")
     private String riskFactors;
 
+    @Column(nullable = false, length = 20)
+    private String examPeriodicity;
+
     @Column
     private OffsetDateTime createdAt;
 
