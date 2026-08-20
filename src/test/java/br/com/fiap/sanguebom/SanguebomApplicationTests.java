@@ -1,4 +1,4 @@
-package com.fiap.sanguebom;
+package br.com.fiap.sanguebom;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
