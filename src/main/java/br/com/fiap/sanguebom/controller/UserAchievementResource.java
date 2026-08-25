@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.UserAchievementDTO;
 import br.com.fiap.sanguebom.service.UserAchievementService;
@@ -43,16 +43,8 @@ public class UserAchievementResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateUserAchievement(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final UserAchievementDTO userAchievementDTO) {
+                                                      @RequestBody @Valid final UserAchievementDTO userAchievementDTO) {
         userAchievementService.update(id, userAchievementDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteUserAchievement(@PathVariable(name = "id") final Long id) {
-        userAchievementService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.RuleDTO;
 import br.com.fiap.sanguebom.service.RuleService;
@@ -41,16 +41,8 @@ public class RuleResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateRule(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final RuleDTO ruleDTO) {
+                                           @RequestBody @Valid final RuleDTO ruleDTO) {
         ruleService.update(id, ruleDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteRule(@PathVariable(name = "id") final Long id) {
-        ruleService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

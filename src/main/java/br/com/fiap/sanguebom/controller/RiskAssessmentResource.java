@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.RiskAssessmentDTO;
 import br.com.fiap.sanguebom.service.RiskAssessmentService;
@@ -43,16 +43,8 @@ public class RiskAssessmentResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateRiskAssessment(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final RiskAssessmentDTO riskAssessmentDTO) {
+                                                     @RequestBody @Valid final RiskAssessmentDTO riskAssessmentDTO) {
         riskAssessmentService.update(id, riskAssessmentDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteRiskAssessment(@PathVariable(name = "id") final Long id) {
-        riskAssessmentService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

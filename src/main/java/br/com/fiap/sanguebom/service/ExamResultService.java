@@ -3,15 +3,12 @@ package br.com.fiap.sanguebom.service;
 import br.com.fiap.sanguebom.domain.Exam;
 import br.com.fiap.sanguebom.domain.ExamItem;
 import br.com.fiap.sanguebom.domain.ExamResult;
-import br.com.fiap.sanguebom.events.BeforeDeleteExam;
-import br.com.fiap.sanguebom.events.BeforeDeleteExamItem;
 import br.com.fiap.sanguebom.model.ExamResultDTO;
 import br.com.fiap.sanguebom.repos.ExamItemRepository;
 import br.com.fiap.sanguebom.repos.ExamRepository;
 import br.com.fiap.sanguebom.repos.ExamResultRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import br.com.fiap.sanguebom.util.ReferencedException;
-import org.springframework.context.event.EventListener;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -19,18 +16,12 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class ExamResultService {
 
     private final ExamResultRepository examResultRepository;
     private final ExamRepository examRepository;
     private final ExamItemRepository examItemRepository;
-
-    public ExamResultService(final ExamResultRepository examResultRepository,
-            final ExamRepository examRepository, final ExamItemRepository examItemRepository) {
-        this.examResultRepository = examResultRepository;
-        this.examRepository = examRepository;
-        this.examItemRepository = examItemRepository;
-    }
 
     public List<ExamResultDTO> findAll() {
         final List<ExamResult> examResults = examResultRepository.findAll(Sort.by("id"));
@@ -56,12 +47,6 @@ public class ExamResultService {
                 .orElseThrow(NotFoundException::new);
         mapToEntity(examResultDTO, examResult);
         examResultRepository.save(examResult);
-    }
-
-    public void delete(final Long id) {
-        final ExamResult examResult = examResultRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        examResultRepository.delete(examResult);
     }
 
     private ExamResultDTO mapToDTO(final ExamResult examResult, final ExamResultDTO examResultDTO) {
@@ -90,27 +75,4 @@ public class ExamResultService {
         examResult.setExamItem(examItem);
         return examResult;
     }
-
-    @EventListener(BeforeDeleteExam.class)
-    public void on(final BeforeDeleteExam event) {
-        final ReferencedException referencedException = new ReferencedException();
-        final ExamResult examExamResult = examResultRepository.findFirstByExamId(event.getId()).orElse(null);
-        if (examExamResult != null) {
-            referencedException.setKey("exam.examResult.exam.referenced");
-            referencedException.addParam(examExamResult.getId());
-            throw referencedException;
-        }
-    }
-
-    @EventListener(BeforeDeleteExamItem.class)
-    public void on(final BeforeDeleteExamItem event) {
-        final ReferencedException referencedException = new ReferencedException();
-        final ExamResult examItemExamResult = examResultRepository.findFirstByExamItemId(event.getId()).orElse(null);
-        if (examItemExamResult != null) {
-            referencedException.setKey("examItem.examResult.examItem.referenced");
-            referencedException.addParam(examItemExamResult.getId());
-            throw referencedException;
-        }
-    }
-
 }

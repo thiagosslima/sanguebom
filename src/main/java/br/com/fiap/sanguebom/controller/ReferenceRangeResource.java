@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.ReferenceRangeDTO;
 import br.com.fiap.sanguebom.service.ReferenceRangeService;
@@ -43,16 +43,8 @@ public class ReferenceRangeResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateReferenceRange(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final ReferenceRangeDTO referenceRangeDTO) {
+                                                     @RequestBody @Valid final ReferenceRangeDTO referenceRangeDTO) {
         referenceRangeService.update(id, referenceRangeDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteReferenceRange(@PathVariable(name = "id") final Long id) {
-        referenceRangeService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

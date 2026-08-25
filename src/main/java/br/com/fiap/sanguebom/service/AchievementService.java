@@ -1,11 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.domain.Achievement;
-import br.com.fiap.sanguebom.events.BeforeDeleteAchievement;
 import br.com.fiap.sanguebom.model.AchievementDTO;
 import br.com.fiap.sanguebom.repos.AchievementRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import org.springframework.context.ApplicationEventPublisher;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -13,16 +12,10 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class AchievementService {
 
     private final AchievementRepository achievementRepository;
-    private final ApplicationEventPublisher publisher;
-
-    public AchievementService(final AchievementRepository achievementRepository,
-            final ApplicationEventPublisher publisher) {
-        this.achievementRepository = achievementRepository;
-        this.publisher = publisher;
-    }
 
     public List<AchievementDTO> findAll() {
         final List<Achievement> achievements = achievementRepository.findAll(Sort.by("id"));
@@ -50,15 +43,8 @@ public class AchievementService {
         achievementRepository.save(achievement);
     }
 
-    public void delete(final Long id) {
-        final Achievement achievement = achievementRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        publisher.publishEvent(new BeforeDeleteAchievement(id));
-        achievementRepository.delete(achievement);
-    }
-
     private AchievementDTO mapToDTO(final Achievement achievement,
-            final AchievementDTO achievementDTO) {
+                                    final AchievementDTO achievementDTO) {
         achievementDTO.setId(achievement.getId());
         achievementDTO.setCode(achievement.getCode());
         achievementDTO.setName(achievement.getName());
@@ -69,12 +55,11 @@ public class AchievementService {
     }
 
     private Achievement mapToEntity(final AchievementDTO achievementDTO,
-            final Achievement achievement) {
+                                    final Achievement achievement) {
         achievement.setCode(achievementDTO.getCode());
         achievement.setName(achievementDTO.getName());
         achievement.setDescription(achievementDTO.getDescription());
         achievement.setActive(achievementDTO.getActive());
-        achievement.setCreatedAt(achievementDTO.getCreatedAt());
         return achievement;
     }
 

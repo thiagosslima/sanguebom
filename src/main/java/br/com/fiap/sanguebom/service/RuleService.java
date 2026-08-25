@@ -2,13 +2,11 @@ package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.domain.ReferenceRange;
 import br.com.fiap.sanguebom.domain.Rule;
-import br.com.fiap.sanguebom.events.BeforeDeleteReferenceRange;
 import br.com.fiap.sanguebom.model.RuleDTO;
 import br.com.fiap.sanguebom.repos.ReferenceRangeRepository;
 import br.com.fiap.sanguebom.repos.RuleRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import br.com.fiap.sanguebom.util.ReferencedException;
-import org.springframework.context.event.EventListener;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -16,16 +14,11 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class RuleService {
 
     private final RuleRepository ruleRepository;
     private final ReferenceRangeRepository referenceRangeRepository;
-
-    public RuleService(final RuleRepository ruleRepository,
-            final ReferenceRangeRepository referenceRangeRepository) {
-        this.ruleRepository = ruleRepository;
-        this.referenceRangeRepository = referenceRangeRepository;
-    }
 
     public List<RuleDTO> findAll() {
         final List<Rule> rules = ruleRepository.findAll(Sort.by("id"));
@@ -51,12 +44,6 @@ public class RuleService {
                 .orElseThrow(NotFoundException::new);
         mapToEntity(ruleDTO, rule);
         ruleRepository.save(rule);
-    }
-
-    public void delete(final Long id) {
-        final Rule rule = ruleRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        ruleRepository.delete(rule);
     }
 
     private RuleDTO mapToDTO(final Rule rule, final RuleDTO ruleDTO) {
@@ -91,16 +78,4 @@ public class RuleService {
         rule.setReferenceRange(referenceRange);
         return rule;
     }
-
-    @EventListener(BeforeDeleteReferenceRange.class)
-    public void on(final BeforeDeleteReferenceRange event) {
-        final ReferencedException referencedException = new ReferencedException();
-        final Rule referenceRangeRule = ruleRepository.findFirstByReferenceRangeId(event.getId()).orElse(null);
-        if (referenceRangeRule != null) {
-            referencedException.setKey("referenceRange.rule.referenceRange.referenced");
-            referencedException.addParam(referenceRangeRule.getId());
-            throw referencedException;
-        }
-    }
-
 }

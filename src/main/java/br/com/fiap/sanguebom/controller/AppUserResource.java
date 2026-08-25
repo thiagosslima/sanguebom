@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.AppUserDTO;
 import br.com.fiap.sanguebom.service.AppUserService;
@@ -41,16 +41,8 @@ public class AppUserResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateAppUser(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final AppUserDTO appUserDTO) {
+                                              @RequestBody @Valid final AppUserDTO appUserDTO) {
         appUserService.update(id, appUserDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteAppUser(@PathVariable(name = "id") final Long id) {
-        appUserService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

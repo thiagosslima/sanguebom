@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.util;
+package br.com.fiap.sanguebom.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

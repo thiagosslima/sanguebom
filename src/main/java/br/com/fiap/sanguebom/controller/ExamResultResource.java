@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.ExamResultDTO;
 import br.com.fiap.sanguebom.service.ExamResultService;
@@ -42,16 +42,8 @@ public class ExamResultResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateExamResult(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final ExamResultDTO examResultDTO) {
+                                                 @RequestBody @Valid final ExamResultDTO examResultDTO) {
         examResultService.update(id, examResultDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteExamResult(@PathVariable(name = "id") final Long id) {
-        examResultService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.AchievementDTO;
 import br.com.fiap.sanguebom.service.AchievementService;
@@ -46,12 +46,4 @@ public class AchievementResource {
         achievementService.update(id, achievementDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteAchievement(@PathVariable(name = "id") final Long id) {
-        achievementService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

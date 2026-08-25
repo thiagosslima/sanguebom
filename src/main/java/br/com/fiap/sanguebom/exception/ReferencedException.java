@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.util;
+package br.com.fiap.sanguebom.exception;
 
 import lombok.Getter;
 import lombok.Setter;

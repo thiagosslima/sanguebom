@@ -1,23 +1,14 @@
 package br.com.fiap.sanguebom.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 
 @Entity
@@ -56,22 +47,15 @@ public class HealthProfile {
     @Column(nullable = false, length = 20)
     private String examPeriodicity;
 
-    @Column
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column
+    @LastModifiedDate
+    @Column(nullable = false)
     private OffsetDateTime updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private AppUser user;
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime dateCreated;
-
-    @LastModifiedDate
-    @Column(nullable = false)
-    private OffsetDateTime lastUpdated;
-
 }

@@ -1,10 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.domain.ExamItem;
-import br.com.fiap.sanguebom.events.BeforeDeleteExamItem;
 import br.com.fiap.sanguebom.model.ExamItemDTO;
 import br.com.fiap.sanguebom.repos.ExamItemRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -13,16 +13,11 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class ExamItemService {
 
     private final ExamItemRepository examItemRepository;
     private final ApplicationEventPublisher publisher;
-
-    public ExamItemService(final ExamItemRepository examItemRepository,
-            final ApplicationEventPublisher publisher) {
-        this.examItemRepository = examItemRepository;
-        this.publisher = publisher;
-    }
 
     public List<ExamItemDTO> findAll() {
         final List<ExamItem> examItems = examItemRepository.findAll(Sort.by("id"));
@@ -48,13 +43,6 @@ public class ExamItemService {
                 .orElseThrow(NotFoundException::new);
         mapToEntity(examItemDTO, examItem);
         examItemRepository.save(examItem);
-    }
-
-    public void delete(final Long id) {
-        final ExamItem examItem = examItemRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        publisher.publishEvent(new BeforeDeleteExamItem(id));
-        examItemRepository.delete(examItem);
     }
 
     private ExamItemDTO mapToDTO(final ExamItem examItem, final ExamItemDTO examItemDTO) {

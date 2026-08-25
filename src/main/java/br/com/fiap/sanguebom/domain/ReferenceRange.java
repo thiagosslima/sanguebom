@@ -66,7 +66,8 @@ public class ReferenceRange {
     @Column
     private LocalDate validUntil;
 
-    @Column
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -75,13 +76,4 @@ public class ReferenceRange {
 
     @OneToMany(mappedBy = "referenceRange")
     private Set<Rule> referenceRangeRules = new HashSet<>();
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime dateCreated;
-
-    @LastModifiedDate
-    @Column(nullable = false)
-    private OffsetDateTime lastUpdated;
-
 }

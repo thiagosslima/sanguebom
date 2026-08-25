@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.HealthUnitDTO;
 import br.com.fiap.sanguebom.service.HealthUnitService;
@@ -42,16 +42,8 @@ public class HealthUnitResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateHealthUnit(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final HealthUnitDTO healthUnitDTO) {
+                                                 @RequestBody @Valid final HealthUnitDTO healthUnitDTO) {
         healthUnitService.update(id, healthUnitDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteHealthUnit(@PathVariable(name = "id") final Long id) {
-        healthUnitService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

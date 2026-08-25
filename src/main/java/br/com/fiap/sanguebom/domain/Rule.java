@@ -68,19 +68,11 @@ public class Rule {
     @Column
     private Boolean active;
 
-    @Column
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reference_range_id")
     private ReferenceRange referenceRange;
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime dateCreated;
-
-    @LastModifiedDate
-    @Column(nullable = false)
-    private OffsetDateTime lastUpdated;
-
 }

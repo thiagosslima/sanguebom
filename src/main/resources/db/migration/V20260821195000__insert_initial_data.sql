@@ -80,22 +80,22 @@ VALUES                                                                          
                                                                                                                       (2, 2, 2, 0.0, 'NORMAL', '1.0', 'Todos os indicadores avaliados estão dentro da faixa desejável.', CURRENT_TIMESTAMP);
 
 -- 4.4 Conquistas Desbloqueadas
-INSERT INTO public.user_achievement (user_id, achievement_id, earned_at) VALUES
-                                                                             (1, 1, CURRENT_TIMESTAMP), -- Carlos fez o 1º exame
-                                                                             (2, 1, CURRENT_TIMESTAMP), -- Ana fez o 1º exame
-                                                                             (2, 2, CURRENT_TIMESTAMP); -- Ana ganhou bônus de "Saúde de Ferro"
+INSERT INTO public.user_achievement (id, user_id, achievement_id, earned_at) VALUES
+                                                                             (1, 1, 1, CURRENT_TIMESTAMP), -- Carlos fez o 1º exame
+                                                                             (2, 2, 1, CURRENT_TIMESTAMP), -- Ana fez o 1º exame
+                                                                             (3, 2, 2, CURRENT_TIMESTAMP); -- Ana ganhou bônus de "Saúde de Ferro"
 
 
 -- ==============================================================================
 -- 5. SINCRONIZAÇÃO DAS SEQUÊNCIAS DE AUTO-INCREMENTO (CRÍTICO)
 -- ==============================================================================
-SELECT setval('public.exam_item_id_seq', (SELECT MAX(id) FROM public.exam_item));
-SELECT setval('public.health_unit_id_seq', (SELECT MAX(id) FROM public.health_unit));
-SELECT setval('public.achievement_id_seq', (SELECT MAX(id) FROM public.achievement));
-SELECT setval('public.reference_range_id_seq', (SELECT MAX(id) FROM public.reference_range));
-SELECT setval('public.rule_id_seq', (SELECT MAX(id) FROM public."rule"));
-SELECT setval('public.app_user_id_seq', (SELECT MAX(id) FROM public.app_user));
-SELECT setval('public.health_profile_id_seq', (SELECT MAX(id) FROM public.health_profile));
-SELECT setval('public.exam_id_seq', (SELECT MAX(id) FROM public.exam));
-SELECT setval('public.exam_result_id_seq', (SELECT MAX(id) FROM public.exam_result));
-SELECT setval('public.risk_assessment_id_seq', (SELECT MAX(id) FROM public.risk_assessment));
+-- SELECT setval('public.exam_item_id_seq', (SELECT MAX(id) FROM public.exam_item));
+-- SELECT setval('public.health_unit_id_seq', (SELECT MAX(id) FROM public.health_unit));
+-- SELECT setval('public.achievement_id_seq', (SELECT MAX(id) FROM public.achievement));
+-- SELECT setval('public.reference_range_id_seq', (SELECT MAX(id) FROM public.reference_range));
+-- SELECT setval('public.rule_id_seq', (SELECT MAX(id) FROM public."rule"));
+-- SELECT setval('public.app_user_id_seq', (SELECT MAX(id) FROM public.app_user));
+-- SELECT setval('public.health_profile_id_seq', (SELECT MAX(id) FROM public.health_profile));
+-- SELECT setval('public.exam_id_seq', (SELECT MAX(id) FROM public.exam));
+-- SELECT setval('public.exam_result_id_seq', (SELECT MAX(id) FROM public.exam_result));
+-- SELECT setval('public.risk_assessment_id_seq', (SELECT MAX(id) FROM public.risk_assessment));

@@ -2,14 +2,8 @@ package br.com.fiap.sanguebom.repos;
 
 import br.com.fiap.sanguebom.domain.Rule;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
-
-
+@Repository
 public interface RuleRepository extends JpaRepository<Rule, Long> {
-
-    @Query("select ru from Rule ru where ru.referenceRange.id = :refRangeId order by ru.lastUpdated desc limit 1")
-    Optional<Rule> findFirstByReferenceRangeId(@Param("refRangeId")Long referenceRangeId);
 }

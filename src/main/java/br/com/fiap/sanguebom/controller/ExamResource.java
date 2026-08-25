@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.ExamDTO;
 import br.com.fiap.sanguebom.service.ExamService;
@@ -45,12 +45,4 @@ public class ExamResource {
         examService.update(id, examDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteExam(@PathVariable(name = "id") final Long id) {
-        examService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

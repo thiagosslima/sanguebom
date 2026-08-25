@@ -53,7 +53,8 @@ public class RiskAssessment {
     @Column(columnDefinition = "text")
     private String explanation;
 
-    @Column
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -63,13 +64,4 @@ public class RiskAssessment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_id")
     private Exam exam;
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime dateCreated;
-
-    @LastModifiedDate
-    @Column(nullable = false)
-    private OffsetDateTime lastUpdated;
-
 }

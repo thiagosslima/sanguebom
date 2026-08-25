@@ -2,13 +2,11 @@ package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.domain.AppUser;
 import br.com.fiap.sanguebom.domain.Notification;
-import br.com.fiap.sanguebom.events.BeforeDeleteAppUser;
 import br.com.fiap.sanguebom.model.NotificationDTO;
 import br.com.fiap.sanguebom.repos.AppUserRepository;
 import br.com.fiap.sanguebom.repos.NotificationRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import br.com.fiap.sanguebom.util.ReferencedException;
-import org.springframework.context.event.EventListener;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -16,16 +14,11 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final AppUserRepository appUserRepository;
-
-    public NotificationService(final NotificationRepository notificationRepository,
-            final AppUserRepository appUserRepository) {
-        this.notificationRepository = notificationRepository;
-        this.appUserRepository = appUserRepository;
-    }
 
     public List<NotificationDTO> findAll() {
         final List<Notification> notifications = notificationRepository.findAll(Sort.by("id"));
@@ -53,14 +46,8 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    public void delete(final Long id) {
-        final Notification notification = notificationRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        notificationRepository.delete(notification);
-    }
-
     private NotificationDTO mapToDTO(final Notification notification,
-            final NotificationDTO notificationDTO) {
+                                     final NotificationDTO notificationDTO) {
         notificationDTO.setId(notification.getId());
         notificationDTO.setType(notification.getType());
         notificationDTO.setTitle(notification.getTitle());
@@ -74,7 +61,7 @@ public class NotificationService {
     }
 
     private Notification mapToEntity(final NotificationDTO notificationDTO,
-            final Notification notification) {
+                                     final Notification notification) {
         notification.setType(notificationDTO.getType());
         notification.setTitle(notificationDTO.getTitle());
         notification.setMessage(notificationDTO.getMessage());
@@ -87,16 +74,4 @@ public class NotificationService {
         notification.setUser(user);
         return notification;
     }
-
-    @EventListener(BeforeDeleteAppUser.class)
-    public void on(final BeforeDeleteAppUser event) {
-        final ReferencedException referencedException = new ReferencedException();
-        final Notification userNotification = notificationRepository.findFirstByUserIdOrderByLastUpdatedDesc(event.getId());
-        if (userNotification != null) {
-            referencedException.setKey("appUser.notification.user.referenced");
-            referencedException.addParam(userNotification.getId());
-            throw referencedException;
-        }
-    }
-
 }

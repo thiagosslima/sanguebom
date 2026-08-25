@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.HealthProfileDTO;
 import br.com.fiap.sanguebom.service.HealthProfileService;
@@ -43,16 +43,8 @@ public class HealthProfileResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateHealthProfile(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final HealthProfileDTO healthProfileDTO) {
+                                                    @RequestBody @Valid final HealthProfileDTO healthProfileDTO) {
         healthProfileService.update(id, healthProfileDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteHealthProfile(@PathVariable(name = "id") final Long id) {
-        healthProfileService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }

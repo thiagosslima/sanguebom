@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rest;
+package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.NotificationDTO;
 import br.com.fiap.sanguebom.service.NotificationService;
@@ -43,16 +43,8 @@ public class NotificationResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateNotification(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final NotificationDTO notificationDTO) {
+                                                   @RequestBody @Valid final NotificationDTO notificationDTO) {
         notificationService.update(id, notificationDTO);
         return ResponseEntity.ok(id);
     }
-
-    @DeleteMapping("/{id}")
-    @ApiResponse(responseCode = "204")
-    public ResponseEntity<Void> deleteNotification(@PathVariable(name = "id") final Long id) {
-        notificationService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
 }
