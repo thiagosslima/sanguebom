@@ -101,7 +101,7 @@ public class ExamService {
     @EventListener(BeforeDeleteAppUser.class)
     public void on(final BeforeDeleteAppUser event) {
         final ReferencedException referencedException = new ReferencedException();
-        final Exam userExam = examRepository.findFirstByUserId(event.getId());
+        final Exam userExam = examRepository.findFirstByUserId(event.getId()).orElse(null);
         if (userExam != null) {
             referencedException.setKey("appUser.exam.user.referenced");
             referencedException.addParam(userExam.getId());
@@ -112,7 +112,7 @@ public class ExamService {
     @EventListener(BeforeDeleteHealthUnit.class)
     public void on(final BeforeDeleteHealthUnit event) {
         final ReferencedException referencedException = new ReferencedException();
-        final Exam healthUnitExam = examRepository.findFirstByHealthUnitId(event.getId());
+        final Exam healthUnitExam = examRepository.findFirstByHealthUnitId(event.getId()).orElse(null);
         if (healthUnitExam != null) {
             referencedException.setKey("healthUnit.exam.healthUnit.referenced");
             referencedException.addParam(healthUnitExam.getId());

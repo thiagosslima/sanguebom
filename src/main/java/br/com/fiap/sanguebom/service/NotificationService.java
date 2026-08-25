@@ -91,7 +91,7 @@ public class NotificationService {
     @EventListener(BeforeDeleteAppUser.class)
     public void on(final BeforeDeleteAppUser event) {
         final ReferencedException referencedException = new ReferencedException();
-        final Notification userNotification = notificationRepository.findFirstByUserId(event.getId());
+        final Notification userNotification = notificationRepository.findFirstByUserIdOrderByLastUpdatedDesc(event.getId());
         if (userNotification != null) {
             referencedException.setKey("appUser.notification.user.referenced");
             referencedException.addParam(userNotification.getId());
