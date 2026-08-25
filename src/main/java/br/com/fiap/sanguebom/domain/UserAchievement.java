@@ -20,7 +20,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
-@Table(name = "UserAchievements")
+@Table(name = "user_achievement")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
