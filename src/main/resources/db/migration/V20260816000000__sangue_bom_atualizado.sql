@@ -4,7 +4,7 @@
 
 -- DROP TABLE public.achievement;
 
-CREATE TABLE public.achievement (
+CREATE TABLE IF NOT EXISTS  public.achievement (
 	id bigserial NOT NULL,
 	code varchar(50) NULL,
 	"name" varchar(100) NULL,
@@ -21,7 +21,7 @@ CREATE TABLE public.achievement (
 
 -- DROP TABLE public.app_user;
 
-CREATE TABLE public.app_user (
+CREATE TABLE IF NOT EXISTS public.app_user (
 	id bigserial NOT NULL,
 	cpf_hash varchar(128) NULL,
 	"name" varchar(150) NULL,
@@ -40,7 +40,7 @@ CREATE TABLE public.app_user (
 
 -- DROP TABLE public.exam_item;
 
-CREATE TABLE public.exam_item (
+CREATE TABLE IF NOT EXISTS public.exam_item (
 	id bigserial NOT NULL,
 	code varchar(50) NULL,
 	"name" varchar(150) NULL,
@@ -59,7 +59,7 @@ CREATE TABLE public.exam_item (
 
 -- DROP TABLE public.health_unit;
 
-CREATE TABLE public.health_unit (
+CREATE TABLE IF NOT EXISTS public.health_unit (
 	id bigserial NOT NULL,
 	"name" varchar(200) NULL,
 	cnes varchar(20) NULL,
@@ -76,7 +76,7 @@ CREATE TABLE public.health_unit (
 
 -- DROP TABLE public.exam;
 
-CREATE TABLE public.exam (
+CREATE TABLE IF NOT EXISTS public.exam (
 	id bigserial NOT NULL,
 	user_id int8 NULL,
 	health_unit_id int8 NULL,
@@ -97,7 +97,7 @@ CREATE TABLE public.exam (
 
 -- DROP TABLE public.exam_result;
 
-CREATE TABLE public.exam_result (
+CREATE TABLE IF NOT EXISTS public.exam_result (
 	id bigserial NOT NULL,
 	exam_id int8 NULL,
 	exam_item_id int8 NULL,
@@ -118,7 +118,7 @@ CREATE TABLE public.exam_result (
 
 -- DROP TABLE public.health_profile;
 
-CREATE TABLE public.health_profile (
+CREATE TABLE IF NOT EXISTS public.health_profile (
 	id bigserial NOT NULL,
 	user_id int8 NULL,
 	sex varchar(20) NULL,
@@ -139,7 +139,7 @@ CREATE TABLE public.health_profile (
 
 -- DROP TABLE public.notification;
 
-CREATE TABLE public.notification (
+CREATE TABLE IF NOT EXISTS public.notification (
 	id bigserial NOT NULL,
 	user_id int8 NULL,
 	"type" varchar(30) NULL,
@@ -160,7 +160,7 @@ CREATE TABLE public.notification (
 
 -- DROP TABLE public.reference_range;
 
-CREATE TABLE public.reference_range (
+CREATE TABLE IF NOT EXISTS public.reference_range (
 	id bigserial NOT NULL,
 	exam_item_id int8 NULL,
 	sex varchar(20) NULL,
@@ -182,7 +182,7 @@ CREATE TABLE public.reference_range (
 
 -- DROP TABLE public.risk_assessment;
 
-CREATE TABLE public.risk_assessment (
+CREATE TABLE IF NOT EXISTS public.risk_assessment (
 	id bigserial NOT NULL,
 	user_id int8 NULL,
 	exam_id int8 NULL,
@@ -203,7 +203,7 @@ CREATE TABLE public.risk_assessment (
 
 -- DROP TABLE public."rule";
 
-CREATE TABLE public."rule" (
+CREATE TABLE IF NOT EXISTS public."rule" (
 	id bigserial NOT NULL,
 	reference_range_id int8 NULL,
 	min_value numeric(12, 4) NULL,
@@ -227,7 +227,7 @@ CREATE TABLE public."rule" (
 
 -- DROP TABLE public.user_achievement;
 
-CREATE TABLE public.user_achievement (
+CREATE TABLE IF NOT EXISTS public.user_achievement (
 	user_id int8 NOT NULL,
 	achievement_id int8 NOT NULL,
 	earned_at timestamp NULL,
