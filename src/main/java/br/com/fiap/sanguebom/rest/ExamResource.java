@@ -1,6 +1,7 @@
 package br.com.fiap.sanguebom.rest;
 
 import br.com.fiap.sanguebom.model.ExamDTO;
+import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
 import br.com.fiap.sanguebom.service.ExamService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
@@ -34,7 +35,7 @@ public class ExamResource {
 
     @PostMapping
     @ApiResponse(responseCode = "201")
-    public ResponseEntity<Long> createExam(@RequestBody @Valid final ExamDTO examDTO) {
+    public ResponseEntity<Long> createExam(@RequestBody @Valid final ExamCreateDTO examDTO) {
         final Long createdId = examService.create(examDTO);
         return new ResponseEntity<>(createdId, HttpStatus.CREATED);
     }

@@ -1,17 +1,8 @@
 package br.com.fiap.sanguebom.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import br.com.fiap.sanguebom.model.exam.ExamStatus;
+import jakarta.persistence.*;
+
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -50,7 +41,8 @@ public class Exam {
     private OffsetDateTime releasedAt;
 
     @Column(length = 30)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private ExamStatus status;
 
     @Column(length = 100)
     private String externalReference;
@@ -67,10 +59,10 @@ public class Exam {
     private HealthUnit healthUnit;
 
     @OneToMany(mappedBy = "exam")
-    private Set<ExamResult> examExamResults = new HashSet<>();
+    private Set<ExamResult> examResults = new HashSet<>();
 
-    @OneToMany(mappedBy = "exam")
-    private Set<RiskAssessment> examRiskAssessments = new HashSet<>();
+    @OneToOne(mappedBy = "exam")
+    private RiskAssessment riskAssessment;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

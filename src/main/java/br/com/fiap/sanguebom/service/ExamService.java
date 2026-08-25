@@ -1,23 +1,31 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.domain.Exam;
-import br.com.fiap.sanguebom.domain.HealthUnit;
+import br.com.fiap.sanguebom.domain.*;
 import br.com.fiap.sanguebom.events.BeforeDeleteAppUser;
 import br.com.fiap.sanguebom.events.BeforeDeleteExam;
 import br.com.fiap.sanguebom.events.BeforeDeleteHealthUnit;
+import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
+import br.com.fiap.sanguebom.mapper.ExamMapper;
 import br.com.fiap.sanguebom.model.ExamDTO;
+import br.com.fiap.sanguebom.model.ExamResult.ExamResultDTO;
+import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
+import br.com.fiap.sanguebom.model.exam.ExamStatus;
 import br.com.fiap.sanguebom.repos.AppUserRepository;
+import br.com.fiap.sanguebom.repos.ExamItemRepository;
 import br.com.fiap.sanguebom.repos.ExamRepository;
 import br.com.fiap.sanguebom.repos.HealthUnitRepository;
 import br.com.fiap.sanguebom.util.NotFoundException;
 import br.com.fiap.sanguebom.util.ReferencedException;
+import jakarta.validation.constraints.NotBlank;
+import org.apache.catalina.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -27,15 +35,26 @@ public class ExamService {
     private final AppUserRepository appUserRepository;
     private final HealthUnitRepository healthUnitRepository;
     private final ApplicationEventPublisher publisher;
+    private final UserServiceHelper userServiceHelper;
+    private final ExamItemRepository examItemRepository;
+
+    private final ExamMapper examMapper;
 
     public ExamService(final ExamRepository examRepository,
             final AppUserRepository appUserRepository,
             final HealthUnitRepository healthUnitRepository,
-            final ApplicationEventPublisher publisher) {
+            final ApplicationEventPublisher publisher,
+            final UserServiceHelper userServiceHelper,
+            final ExamItemRepository examItemRepository,
+            final ExamMapper examMapper
+    ) {
         this.examRepository = examRepository;
         this.appUserRepository = appUserRepository;
         this.healthUnitRepository = healthUnitRepository;
         this.publisher = publisher;
+        this.userServiceHelper = userServiceHelper;
+        this.examItemRepository = examItemRepository;
+        this.examMapper = examMapper;
     }
 
     public List<ExamDTO> findAll() {
@@ -51,9 +70,36 @@ public class ExamService {
                 .orElseThrow(NotFoundException::new);
     }
 
-    public Long create(final ExamDTO examDTO) {
-        final Exam exam = new Exam();
-        mapToEntity(examDTO, exam);
+    public Long create(final ExamCreateDTO examDTO) {
+
+        AppUser user = userServiceHelper.getUserByIdOrFail(examDTO.userId());
+
+        Long healthUnitId = examDTO.healthUnitId();
+
+        HealthUnit healthUnit = healthUnitRepository.findById(healthUnitId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Unidade de saúde não encontrada para o id: %d", healthUnitId)));
+
+        examDTO.analyzedItems().forEach(examResultDTO -> {
+            ExamItem examItem = examItemRepository.findActiveById(examResultDTO.examItemId())
+                    .orElseThrow(() -> new NotFoundException(
+                            String.format("Item de exame não encontrado para o id: %d", examResultDTO.examItemId())));
+        });
+
+        Set<Long> examResultsIds = examDTO.analyzedItems().stream()
+                .map(ExamResultDTO::examItemId)
+                .collect(Collectors.toSet());
+
+        if(examResultsIds.size() != examDTO.analyzedItems().size()){
+            throw new IllegalArgumentException("Não pode haver itens de exame duplicados");
+        }
+
+
+        final Exam exam = examMapper.toEntity(examDTO);
+        exam.setStatus(ExamStatus.COLLECTED);
+        exam.setHealthUnit(healthUnit);
+        exam.setUser(user);
+
         return examRepository.save(exam).getId();
     }
 
@@ -71,32 +117,6 @@ public class ExamService {
         examRepository.delete(exam);
     }
 
-    private ExamDTO mapToDTO(final Exam exam, final ExamDTO examDTO) {
-        examDTO.setId(exam.getId());
-        examDTO.setCollectedAt(exam.getCollectedAt());
-        examDTO.setReleasedAt(exam.getReleasedAt());
-        examDTO.setStatus(exam.getStatus());
-        examDTO.setExternalReference(exam.getExternalReference());
-        examDTO.setCreatedAt(exam.getCreatedAt());
-        examDTO.setUser(exam.getUser() == null ? null : exam.getUser().getId());
-        examDTO.setHealthUnit(exam.getHealthUnit() == null ? null : exam.getHealthUnit().getId());
-        return examDTO;
-    }
-
-    private Exam mapToEntity(final ExamDTO examDTO, final Exam exam) {
-        exam.setCollectedAt(examDTO.getCollectedAt());
-        exam.setReleasedAt(examDTO.getReleasedAt());
-        exam.setStatus(examDTO.getStatus());
-        exam.setExternalReference(examDTO.getExternalReference());
-        exam.setCreatedAt(examDTO.getCreatedAt());
-        final AppUser user = examDTO.getUser() == null ? null : appUserRepository.findById(examDTO.getUser())
-                .orElseThrow(() -> new NotFoundException("user not found"));
-        exam.setUser(user);
-        final HealthUnit healthUnit = examDTO.getHealthUnit() == null ? null : healthUnitRepository.findById(examDTO.getHealthUnit())
-                .orElseThrow(() -> new NotFoundException("healthUnit not found"));
-        exam.setHealthUnit(healthUnit);
-        return exam;
-    }
 
     @EventListener(BeforeDeleteAppUser.class)
     public void on(final BeforeDeleteAppUser event) {

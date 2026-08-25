@@ -23,8 +23,6 @@ public class ExamDTO {
     @Size(max = 100)
     private String externalReference;
 
-    private OffsetDateTime createdAt;
-
     private Long user;
 
     private Long healthUnit;
