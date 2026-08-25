@@ -94,7 +94,7 @@ public class ExamResultService {
     @EventListener(BeforeDeleteExam.class)
     public void on(final BeforeDeleteExam event) {
         final ReferencedException referencedException = new ReferencedException();
-        final ExamResult examExamResult = examResultRepository.findFirstByExamId(event.getId());
+        final ExamResult examExamResult = examResultRepository.findFirstByExamId(event.getId()).orElse(null);
         if (examExamResult != null) {
             referencedException.setKey("exam.examResult.exam.referenced");
             referencedException.addParam(examExamResult.getId());
@@ -105,7 +105,7 @@ public class ExamResultService {
     @EventListener(BeforeDeleteExamItem.class)
     public void on(final BeforeDeleteExamItem event) {
         final ReferencedException referencedException = new ReferencedException();
-        final ExamResult examItemExamResult = examResultRepository.findFirstByExamItemId(event.getId());
+        final ExamResult examItemExamResult = examResultRepository.findFirstByExamItemId(event.getId()).orElse(null);
         if (examItemExamResult != null) {
             referencedException.setKey("examItem.examResult.examItem.referenced");
             referencedException.addParam(examItemExamResult.getId());

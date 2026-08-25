@@ -95,7 +95,7 @@ public class RuleService {
     @EventListener(BeforeDeleteReferenceRange.class)
     public void on(final BeforeDeleteReferenceRange event) {
         final ReferencedException referencedException = new ReferencedException();
-        final Rule referenceRangeRule = ruleRepository.findFirstByReferenceRangeId(event.getId());
+        final Rule referenceRangeRule = ruleRepository.findFirstByReferenceRangeId(event.getId()).orElse(null);
         if (referenceRangeRule != null) {
             referencedException.setKey("referenceRange.rule.referenceRange.referenced");
             referencedException.addParam(referenceRangeRule.getId());
