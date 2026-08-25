@@ -4,9 +4,8 @@ import br.com.fiap.sanguebom.domain.*;
 import br.com.fiap.sanguebom.events.BeforeDeleteAppUser;
 import br.com.fiap.sanguebom.events.BeforeDeleteExam;
 import br.com.fiap.sanguebom.events.BeforeDeleteHealthUnit;
-import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamMapper;
-import br.com.fiap.sanguebom.model.ExamDTO;
+import br.com.fiap.sanguebom.model.ExamRecoverDTO;
 import br.com.fiap.sanguebom.model.ExamResult.ExamResultDTO;
 import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
 import br.com.fiap.sanguebom.model.exam.ExamStatus;
@@ -16,8 +15,6 @@ import br.com.fiap.sanguebom.repos.ExamRepository;
 import br.com.fiap.sanguebom.repos.HealthUnitRepository;
 import br.com.fiap.sanguebom.util.NotFoundException;
 import br.com.fiap.sanguebom.util.ReferencedException;
-import jakarta.validation.constraints.NotBlank;
-import org.apache.catalina.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Sort;
@@ -57,16 +54,16 @@ public class ExamService {
         this.examMapper = examMapper;
     }
 
-    public List<ExamDTO> findAll() {
+    public List<ExamRecoverDTO> findAll() {
         final List<Exam> exams = examRepository.findAll(Sort.by("id"));
         return exams.stream()
-                .map(exam -> mapToDTO(exam, new ExamDTO()))
+                .map(exam -> examMapper.toDTO(exam))
                 .toList();
     }
 
-    public ExamDTO get(final Long id) {
+    public ExamRecoverDTO get(final Long id) {
         return examRepository.findById(id)
-                .map(exam -> mapToDTO(exam, new ExamDTO()))
+                .map(exam -> examMapper.toDTO(exam))
                 .orElseThrow(NotFoundException::new);
     }
 
@@ -103,10 +100,10 @@ public class ExamService {
         return examRepository.save(exam).getId();
     }
 
-    public void update(final Long id, final ExamDTO examDTO) {
-        final Exam exam = examRepository.findById(id)
+    public void update(final Long id, final ExamRecoverDTO examRecoverDTO) {
+        examRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
-        mapToEntity(examDTO, exam);
+        Exam exam = examMapper.toEntity(examRecoverDTO);
         examRepository.save(exam);
     }
 

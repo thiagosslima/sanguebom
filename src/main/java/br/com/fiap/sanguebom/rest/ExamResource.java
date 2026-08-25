@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.rest;
 
-import br.com.fiap.sanguebom.model.ExamDTO;
+import br.com.fiap.sanguebom.model.ExamRecoverDTO;
 import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
 import br.com.fiap.sanguebom.service.ExamService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -24,12 +24,12 @@ public class ExamResource {
     }
 
     @GetMapping
-    public ResponseEntity<List<ExamDTO>> getAllExams() {
+    public ResponseEntity<List<ExamRecoverDTO>> getAllExams() {
         return ResponseEntity.ok(examService.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ExamDTO> getExam(@PathVariable(name = "id") final Long id) {
+    public ResponseEntity<ExamRecoverDTO> getExam(@PathVariable(name = "id") final Long id) {
         return ResponseEntity.ok(examService.get(id));
     }
 
@@ -42,8 +42,8 @@ public class ExamResource {
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateExam(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final ExamDTO examDTO) {
-        examService.update(id, examDTO);
+            @RequestBody @Valid final ExamRecoverDTO examRecoverDTO) {
+        examService.update(id, examRecoverDTO);
         return ResponseEntity.ok(id);
     }
 

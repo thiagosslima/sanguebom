@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model;
 
+import br.com.fiap.sanguebom.model.exam.ExamStatus;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,7 +10,7 @@ import java.time.OffsetDateTime;
 
 @Getter
 @Setter
-public class ExamDTO {
+public class ExamRecoverDTO {
 
     private Long id;
 
@@ -17,14 +18,12 @@ public class ExamDTO {
 
     private OffsetDateTime releasedAt;
 
-    @Size(max = 30)
-    private String status;
+    private ExamStatus status;
 
-    @Size(max = 100)
     private String externalReference;
 
-    private Long user;
+    private Long userId;
 
-    private Long healthUnit;
+    private Long healthUnitId;
 
 }
