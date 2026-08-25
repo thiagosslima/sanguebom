@@ -91,7 +91,7 @@ public class HealthProfileService {
     @EventListener(BeforeDeleteAppUser.class)
     public void on(final BeforeDeleteAppUser event) {
         final ReferencedException referencedException = new ReferencedException();
-        final HealthProfile userHealthProfile = healthProfileRepository.findFirstByUserId(event.getId());
+        final HealthProfile userHealthProfile = healthProfileRepository.findFirstByUserId(event.getId()).orElse(null);
         if (userHealthProfile != null) {
             referencedException.setKey("appUser.healthProfile.user.referenced");
             referencedException.addParam(userHealthProfile.getId());

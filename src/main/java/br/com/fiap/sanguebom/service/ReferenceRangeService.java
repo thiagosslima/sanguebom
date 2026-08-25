@@ -99,7 +99,7 @@ public class ReferenceRangeService {
     @EventListener(BeforeDeleteExamItem.class)
     public void on(final BeforeDeleteExamItem event) {
         final ReferencedException referencedException = new ReferencedException();
-        final ReferenceRange examItemReferenceRange = referenceRangeRepository.findFirstByExamItemId(event.getId());
+        final ReferenceRange examItemReferenceRange = referenceRangeRepository.findFirstByExamItemId(event.getId()).orElse(null);
         if (examItemReferenceRange != null) {
             referencedException.setKey("examItem.referenceRange.examItem.referenced");
             referencedException.addParam(examItemReferenceRange.getId());

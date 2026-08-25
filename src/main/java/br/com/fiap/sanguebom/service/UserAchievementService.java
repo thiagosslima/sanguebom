@@ -89,7 +89,7 @@ public class UserAchievementService {
     @EventListener(BeforeDeleteAppUser.class)
     public void on(final BeforeDeleteAppUser event) {
         final ReferencedException referencedException = new ReferencedException();
-        final UserAchievement userUserAchievement = userAchievementRepository.findFirstByUserId(event.getId());
+        final UserAchievement userUserAchievement = userAchievementRepository.findFirstByUserId(event.getId()).orElse(null);
         if (userUserAchievement != null) {
             referencedException.setKey("appUser.userAchievement.user.referenced");
             referencedException.addParam(userUserAchievement.getId());
@@ -100,7 +100,7 @@ public class UserAchievementService {
     @EventListener(BeforeDeleteAchievement.class)
     public void on(final BeforeDeleteAchievement event) {
         final ReferencedException referencedException = new ReferencedException();
-        final UserAchievement achievementUserAchievement = userAchievementRepository.findFirstByAchievementId(event.getId());
+        final UserAchievement achievementUserAchievement = userAchievementRepository.findFirstByAchievementId(event.getId()).orElse(null);
         if (achievementUserAchievement != null) {
             referencedException.setKey("achievement.userAchievement.achievement.referenced");
             referencedException.addParam(achievementUserAchievement.getId());

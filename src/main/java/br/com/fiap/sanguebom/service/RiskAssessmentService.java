@@ -96,7 +96,8 @@ public class RiskAssessmentService {
     @EventListener(BeforeDeleteAppUser.class)
     public void on(final BeforeDeleteAppUser event) {
         final ReferencedException referencedException = new ReferencedException();
-        final RiskAssessment userRiskAssessment = riskAssessmentRepository.findFirstByUserId(event.getId());
+        final RiskAssessment userRiskAssessment = riskAssessmentRepository.findFirstByUserId(event.getId()).orElse(null);
+
         if (userRiskAssessment != null) {
             referencedException.setKey("appUser.riskAssessment.user.referenced");
             referencedException.addParam(userRiskAssessment.getId());
@@ -107,7 +108,9 @@ public class RiskAssessmentService {
     @EventListener(BeforeDeleteExam.class)
     public void on(final BeforeDeleteExam event) {
         final ReferencedException referencedException = new ReferencedException();
-        final RiskAssessment examRiskAssessment = riskAssessmentRepository.findFirstByExamId(event.getId());
+
+        final RiskAssessment examRiskAssessment = riskAssessmentRepository.findFirstByExamId(event.getId()).orElse(null);
+
         if (examRiskAssessment != null) {
             referencedException.setKey("exam.riskAssessment.exam.referenced");
             referencedException.addParam(examRiskAssessment.getId());
