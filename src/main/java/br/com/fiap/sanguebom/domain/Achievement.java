@@ -20,7 +20,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
-@Table(name = "Achievements")
+@Table(name = "achievement")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
@@ -52,15 +52,12 @@ public class Achievement {
     @Column
     private Boolean active;
 
-    @Column
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @OneToMany(mappedBy = "achievement")
     private Set<UserAchievement> achievementUserAchievements = new HashSet<>();
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime dateCreated;
 
     @LastModifiedDate
     @Column(nullable = false)

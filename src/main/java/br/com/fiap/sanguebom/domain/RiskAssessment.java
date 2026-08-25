@@ -12,7 +12,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
-@Table(name = "RiskAssessments")
+@Table(name = "risk_assessment")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter

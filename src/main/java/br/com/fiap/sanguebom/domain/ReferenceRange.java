@@ -25,7 +25,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
-@Table(name = "ReferenceRanges")
+@Table(name = "reference_range")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter

@@ -21,7 +21,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
-@Table(name = "HealthProfiles")
+@Table(name = "health_profile")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
