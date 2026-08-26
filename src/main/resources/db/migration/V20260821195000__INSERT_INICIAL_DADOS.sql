@@ -80,10 +80,10 @@ VALUES                                                                          
                                                                                                                       (2, 2, 2, 0.0, 'NORMAL', '1.0', 'Todos os indicadores avaliados estão dentro da faixa desejável.', CURRENT_TIMESTAMP);
 
 -- 4.4 Conquistas Desbloqueadas
-INSERT INTO public.user_achievement (id, user_id, achievement_id, earned_at) VALUES
-                                                                             (1, 1, 1, CURRENT_TIMESTAMP), -- Carlos fez o 1º exame
-                                                                             (2, 2, 1, CURRENT_TIMESTAMP), -- Ana fez o 1º exame
-                                                                             (3, 2, 2, CURRENT_TIMESTAMP); -- Ana ganhou bônus de "Saúde de Ferro"
+INSERT INTO public.user_achievement (user_id, achievement_id, earned_at) VALUES
+                                                                             (1, 1, CURRENT_TIMESTAMP), -- Carlos fez o 1º exame
+                                                                             (2, 1, CURRENT_TIMESTAMP), -- Ana fez o 1º exame
+                                                                             (2, 2, CURRENT_TIMESTAMP); -- Ana ganhou bônus de "Saúde de Ferro"
 
 
 -- ==============================================================================

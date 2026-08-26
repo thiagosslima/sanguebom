@@ -3,6 +3,8 @@ package br.com.fiap.sanguebom.model.entities;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -12,7 +14,7 @@ import java.time.OffsetDateTime;
 
 
 @Entity
-@Table(name = "health_Profile")
+@Table(name = "health_profile")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
@@ -41,7 +43,8 @@ public class HealthProfile {
     @Column(precision = 6, scale = 2)
     private BigDecimal weightKg;
 
-    @Column(columnDefinition = "text")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private String riskFactors;
 
     @Column(nullable = false, length = 20)

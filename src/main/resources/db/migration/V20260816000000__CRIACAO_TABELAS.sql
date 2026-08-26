@@ -4,7 +4,7 @@
 
 -- DROP TABLE public.achievement;
 
-CREATE TABLE IF NOT EXISTS  public.achievement (
+CREATE TABLE IF NOT EXISTS public.achievement (
 	id bigserial NOT NULL,
 	code varchar(50) NULL,
 	"name" varchar(100) NULL,

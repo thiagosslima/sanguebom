@@ -49,6 +49,9 @@ public class AppUser {
     @Column(length = 20)
     private String status;
 
+    @Column(length = 1)
+    private String sex;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
