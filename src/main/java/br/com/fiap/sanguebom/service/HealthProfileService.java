@@ -1,10 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.domain.HealthProfile;
-import br.com.fiap.sanguebom.model.HealthProfileDTO;
-import br.com.fiap.sanguebom.repos.AppUserRepository;
-import br.com.fiap.sanguebom.repos.HealthProfileRepository;
+import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.model.entities.HealthProfile;
+import br.com.fiap.sanguebom.model.dtos.HealthProfileDTO;
+import br.com.fiap.sanguebom.repository.AppUserRepository;
+import br.com.fiap.sanguebom.repository.HealthProfileRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;

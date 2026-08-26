@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.model.HealthProfileDTO;
+import br.com.fiap.sanguebom.model.dtos.HealthProfileDTO;
 import br.com.fiap.sanguebom.service.HealthProfileService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;

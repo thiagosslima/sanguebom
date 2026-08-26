@@ -29,7 +29,8 @@ services:
     networks:
       - sanguebom-network
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     environment:

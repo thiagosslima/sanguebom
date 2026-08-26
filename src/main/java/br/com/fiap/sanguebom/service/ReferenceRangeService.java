@@ -1,10 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.ExamItem;
-import br.com.fiap.sanguebom.domain.ReferenceRange;
-import br.com.fiap.sanguebom.model.ReferenceRangeDTO;
-import br.com.fiap.sanguebom.repos.ExamItemRepository;
-import br.com.fiap.sanguebom.repos.ReferenceRangeRepository;
+import br.com.fiap.sanguebom.model.entities.ExamItem;
+import br.com.fiap.sanguebom.model.entities.ReferenceRange;
+import br.com.fiap.sanguebom.model.dtos.ReferenceRangeDTO;
+import br.com.fiap.sanguebom.repository.ExamItemRepository;
+import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;

@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.model.NotificationDTO;
+import br.com.fiap.sanguebom.model.dtos.NotificationDTO;
 import br.com.fiap.sanguebom.service.NotificationService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;

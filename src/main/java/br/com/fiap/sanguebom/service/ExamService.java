@@ -1,12 +1,12 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.domain.Exam;
-import br.com.fiap.sanguebom.domain.HealthUnit;
-import br.com.fiap.sanguebom.model.ExamDTO;
-import br.com.fiap.sanguebom.repos.AppUserRepository;
-import br.com.fiap.sanguebom.repos.ExamRepository;
-import br.com.fiap.sanguebom.repos.HealthUnitRepository;
+import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.model.entities.Exam;
+import br.com.fiap.sanguebom.model.entities.HealthUnit;
+import br.com.fiap.sanguebom.model.dtos.ExamDTO;
+import br.com.fiap.sanguebom.repository.AppUserRepository;
+import br.com.fiap.sanguebom.repository.ExamRepository;
+import br.com.fiap.sanguebom.repository.HealthUnitRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;

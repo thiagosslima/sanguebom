@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.model.ExamDTO;
+import br.com.fiap.sanguebom.model.dtos.ExamDTO;
 import br.com.fiap.sanguebom.service.ExamService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;

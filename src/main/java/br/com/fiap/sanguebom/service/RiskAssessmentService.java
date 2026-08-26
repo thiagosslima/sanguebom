@@ -1,12 +1,12 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.domain.Exam;
-import br.com.fiap.sanguebom.domain.RiskAssessment;
-import br.com.fiap.sanguebom.model.RiskAssessmentDTO;
-import br.com.fiap.sanguebom.repos.AppUserRepository;
-import br.com.fiap.sanguebom.repos.ExamRepository;
-import br.com.fiap.sanguebom.repos.RiskAssessmentRepository;
+import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.model.entities.Exam;
+import br.com.fiap.sanguebom.model.entities.RiskAssessment;
+import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
+import br.com.fiap.sanguebom.repository.AppUserRepository;
+import br.com.fiap.sanguebom.repository.ExamRepository;
+import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;

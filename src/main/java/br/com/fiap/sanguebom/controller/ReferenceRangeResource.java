@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.model.ReferenceRangeDTO;
+import br.com.fiap.sanguebom.model.dtos.ReferenceRangeDTO;
 import br.com.fiap.sanguebom.service.ReferenceRangeService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;

@@ -1,8 +1,8 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.model.AppUserDTO;
-import br.com.fiap.sanguebom.repos.AppUserRepository;
+import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.model.dtos.AppUserDTO;
+import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;

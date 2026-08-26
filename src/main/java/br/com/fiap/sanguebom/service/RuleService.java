@@ -1,10 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.ReferenceRange;
-import br.com.fiap.sanguebom.domain.Rule;
-import br.com.fiap.sanguebom.model.RuleDTO;
-import br.com.fiap.sanguebom.repos.ReferenceRangeRepository;
-import br.com.fiap.sanguebom.repos.RuleRepository;
+import br.com.fiap.sanguebom.model.entities.ReferenceRange;
+import br.com.fiap.sanguebom.model.entities.Rule;
+import br.com.fiap.sanguebom.model.dtos.RuleDTO;
+import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
+import br.com.fiap.sanguebom.repository.RuleRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;

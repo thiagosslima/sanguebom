@@ -1,8 +1,8 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.Achievement;
-import br.com.fiap.sanguebom.model.AchievementDTO;
-import br.com.fiap.sanguebom.repos.AchievementRepository;
+import br.com.fiap.sanguebom.model.entities.Achievement;
+import br.com.fiap.sanguebom.model.dtos.AchievementDTO;
+import br.com.fiap.sanguebom.repository.AchievementRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
