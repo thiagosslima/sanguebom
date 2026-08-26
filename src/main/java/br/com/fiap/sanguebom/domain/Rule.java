@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.domain;
 
+import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -54,7 +55,7 @@ public class Rule {
     private Boolean maxInclusive;
 
     @Column(length = 30)
-    private String level;
+    private ExamResultFlag level;
 
     @Column(precision = 4, scale = 2)
     private BigDecimal score;
@@ -82,5 +83,25 @@ public class Rule {
     @LastModifiedDate
     @Column(nullable = false)
     private OffsetDateTime lastUpdated;
+
+    public boolean appliesTo(BigDecimal value) {
+
+        boolean respectsMin = true;
+        boolean respectsMax = true;
+
+        if (minValue != null) {
+            respectsMin = Boolean.TRUE.equals(minInclusive)
+                    ? value.compareTo(minValue) >= 0
+                    : value.compareTo(minValue) > 0;
+        }
+
+        if (maxValue != null) {
+            respectsMax = Boolean.TRUE.equals(maxInclusive)
+                    ? value.compareTo(maxValue) <= 0
+                    : value.compareTo(maxValue) < 0;
+        }
+
+        return respectsMin && respectsMax;
+    }
 
 }

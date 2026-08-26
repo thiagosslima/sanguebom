@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.model.exam;
+package br.com.fiap.sanguebom.model.enums;
 
 public enum ExamStatus {
     COLLECTED,

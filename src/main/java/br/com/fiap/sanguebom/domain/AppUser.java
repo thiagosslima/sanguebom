@@ -1,14 +1,8 @@
 package br.com.fiap.sanguebom.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import br.com.fiap.sanguebom.model.enums.AppUserSex;
+import jakarta.persistence.*;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -55,6 +49,10 @@ public class AppUser {
 
     @Column(length = 20)
     private String status;
+
+    @Column(length = 1)
+    @Enumerated(EnumType.STRING)
+    private AppUserSex sex;
 
     @Column
     private OffsetDateTime createdAt;

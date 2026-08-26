@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.domain;
 
-import br.com.fiap.sanguebom.model.exam.ExamStatus;
+import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;

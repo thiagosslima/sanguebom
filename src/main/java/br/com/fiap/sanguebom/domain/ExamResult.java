@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.domain;
 
+import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -51,10 +52,13 @@ public class ExamResult {
     private String unit;
 
     @Column(length = 30)
-    private String flag;
+    private ExamResultFlag flag;
 
     @Column
+    @CreatedDate
     private OffsetDateTime createdAt;
+
+    private OffsetDateTime lastUpdated;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_id")
@@ -63,13 +67,5 @@ public class ExamResult {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_item_id")
     private ExamItem examItem;
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime dateCreated;
-
-    @LastModifiedDate
-    @Column(nullable = false)
-    private OffsetDateTime lastUpdated;
 
 }

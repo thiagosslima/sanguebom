@@ -1,5 +1,7 @@
 package br.com.fiap.sanguebom.domain;
 
+import br.com.fiap.sanguebom.model.enums.RiskAssessmentLevel;
+import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -35,8 +37,9 @@ public class RiskAssessment {
     @Column(precision = 5, scale = 2)
     private BigDecimal score;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 30)
-    private String level;
+    private RiskAssessmentLevel level;
 
     @Column(length = 30)
     private String rulesVersion;
@@ -62,5 +65,14 @@ public class RiskAssessment {
     @LastModifiedDate
     @Column(nullable = false)
     private OffsetDateTime lastUpdated;
+
+    public void applyAssessment(
+            BigDecimal score,
+            RiskClassification classification
+    ) {
+        this.score = score;
+        this.level = classification.level();
+        this.explanation = classification.explanation();
+    }
 
 }

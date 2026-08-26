@@ -1,7 +1,6 @@
 package br.com.fiap.sanguebom.model;
 
-import br.com.fiap.sanguebom.model.exam.ExamStatus;
-import jakarta.validation.constraints.Size;
+import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import lombok.Getter;
 import lombok.Setter;
 
