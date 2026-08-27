@@ -1,11 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.HealthUnit;
-import br.com.fiap.sanguebom.events.BeforeDeleteHealthUnit;
-import br.com.fiap.sanguebom.model.HealthUnitDTO;
-import br.com.fiap.sanguebom.repos.HealthUnitRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import org.springframework.context.ApplicationEventPublisher;
+import br.com.fiap.sanguebom.model.entities.HealthUnit;
+import br.com.fiap.sanguebom.model.dtos.HealthUnitDTO;
+import br.com.fiap.sanguebom.repository.HealthUnitRepository;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -13,16 +12,10 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class HealthUnitService {
 
     private final HealthUnitRepository healthUnitRepository;
-    private final ApplicationEventPublisher publisher;
-
-    public HealthUnitService(final HealthUnitRepository healthUnitRepository,
-            final ApplicationEventPublisher publisher) {
-        this.healthUnitRepository = healthUnitRepository;
-        this.publisher = publisher;
-    }
 
     public List<HealthUnitDTO> findAll() {
         final List<HealthUnit> healthUnits = healthUnitRepository.findAll(Sort.by("id"));
@@ -50,13 +43,6 @@ public class HealthUnitService {
         healthUnitRepository.save(healthUnit);
     }
 
-    public void delete(final Long id) {
-        final HealthUnit healthUnit = healthUnitRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        publisher.publishEvent(new BeforeDeleteHealthUnit(id));
-        healthUnitRepository.delete(healthUnit);
-    }
-
     private HealthUnitDTO mapToDTO(final HealthUnit healthUnit, final HealthUnitDTO healthUnitDTO) {
         healthUnitDTO.setId(healthUnit.getId());
         healthUnitDTO.setName(healthUnit.getName());
@@ -75,5 +61,4 @@ public class HealthUnitService {
         healthUnit.setCreatedAt(healthUnitDTO.getCreatedAt());
         return healthUnit;
     }
-
 }

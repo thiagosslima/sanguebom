@@ -1,11 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.events.BeforeDeleteAppUser;
-import br.com.fiap.sanguebom.model.AppUserDTO;
-import br.com.fiap.sanguebom.repos.AppUserRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import org.springframework.context.ApplicationEventPublisher;
+import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.model.dtos.AppUserDTO;
+import br.com.fiap.sanguebom.repository.AppUserRepository;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -13,16 +12,10 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class AppUserService {
 
     private final AppUserRepository appUserRepository;
-    private final ApplicationEventPublisher publisher;
-
-    public AppUserService(final AppUserRepository appUserRepository,
-            final ApplicationEventPublisher publisher) {
-        this.appUserRepository = appUserRepository;
-        this.publisher = publisher;
-    }
 
     public List<AppUserDTO> findAll() {
         final List<AppUser> appUsers = appUserRepository.findAll(Sort.by("id"));
@@ -48,13 +41,6 @@ public class AppUserService {
                 .orElseThrow(NotFoundException::new);
         mapToEntity(appUserDTO, appUser);
         appUserRepository.save(appUser);
-    }
-
-    public void delete(final Long id) {
-        final AppUser appUser = appUserRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        publisher.publishEvent(new BeforeDeleteAppUser(id));
-        appUserRepository.delete(appUser);
     }
 
     private AppUserDTO mapToDTO(final AppUser appUser, final AppUserDTO appUserDTO) {

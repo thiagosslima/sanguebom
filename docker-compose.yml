@@ -2,8 +2,44 @@ services:
   postgres:
     image: postgres:18.4
     environment:
-    - POSTGRES_DB=sanguebom
-    - POSTGRES_USER=postgres
-    - POSTGRES_PASSWORD=P4ssword!
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     ports:
-    - 5433:5432
+      - "${DB_PORT}:5432"
+    networks:
+      - sanguebom-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    env_file:
+      - .env
+
+  sanguebom:
+    build:
+      context: .
+      args:
+        DB_HOST_ARG: postgres
+        POSTGRES_PASSWORD_ARG: ${DB_PASSWORD}
+        DB_PORT_ARG: 5432
+    ports:
+      - "8080:8080"
+    networks:
+      - sanguebom-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME}
+      DB_NAME: ${DB_NAME}
+
+networks:
+  sanguebom-network:
+    driver: bridge
