@@ -1,8 +1,9 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.repos.AppUserRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
+
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.repository.AppUserRepository;
 import org.springframework.stereotype.Service;
 
 @Service

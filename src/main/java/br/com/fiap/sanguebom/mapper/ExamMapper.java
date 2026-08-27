@@ -1,8 +1,9 @@
 package br.com.fiap.sanguebom.mapper;
 
-import br.com.fiap.sanguebom.domain.Exam;
-import br.com.fiap.sanguebom.model.ExamRecoverDTO;
+
+import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
+import br.com.fiap.sanguebom.model.exam.ExamRecoverDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

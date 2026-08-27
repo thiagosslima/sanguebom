@@ -1,16 +1,12 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.ExamItem;
-import br.com.fiap.sanguebom.domain.ReferenceRange;
-import br.com.fiap.sanguebom.events.BeforeDeleteExamItem;
-import br.com.fiap.sanguebom.events.BeforeDeleteReferenceRange;
-import br.com.fiap.sanguebom.model.ReferenceRangeDTO;
-import br.com.fiap.sanguebom.repos.ExamItemRepository;
-import br.com.fiap.sanguebom.repos.ReferenceRangeRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import br.com.fiap.sanguebom.util.ReferencedException;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
+import br.com.fiap.sanguebom.model.entities.ExamItem;
+import br.com.fiap.sanguebom.model.entities.ReferenceRange;
+import br.com.fiap.sanguebom.model.dtos.ReferenceRangeDTO;
+import br.com.fiap.sanguebom.repository.ExamItemRepository;
+import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -18,19 +14,11 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class ReferenceRangeService {
 
     private final ReferenceRangeRepository referenceRangeRepository;
     private final ExamItemRepository examItemRepository;
-    private final ApplicationEventPublisher publisher;
-
-    public ReferenceRangeService(final ReferenceRangeRepository referenceRangeRepository,
-            final ExamItemRepository examItemRepository,
-            final ApplicationEventPublisher publisher) {
-        this.referenceRangeRepository = referenceRangeRepository;
-        this.examItemRepository = examItemRepository;
-        this.publisher = publisher;
-    }
 
     public List<ReferenceRangeDTO> findAll() {
         final List<ReferenceRange> referenceRanges = referenceRangeRepository.findAll(Sort.by("id"));
@@ -58,15 +46,8 @@ public class ReferenceRangeService {
         referenceRangeRepository.save(referenceRange);
     }
 
-    public void delete(final Long id) {
-        final ReferenceRange referenceRange = referenceRangeRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        publisher.publishEvent(new BeforeDeleteReferenceRange(id));
-        referenceRangeRepository.delete(referenceRange);
-    }
-
     private ReferenceRangeDTO mapToDTO(final ReferenceRange referenceRange,
-            final ReferenceRangeDTO referenceRangeDTO) {
+                                       final ReferenceRangeDTO referenceRangeDTO) {
         referenceRangeDTO.setId(referenceRange.getId());
         referenceRangeDTO.setSex(referenceRange.getSex());
         referenceRangeDTO.setAgeMinYears(referenceRange.getAgeMinYears());
@@ -81,7 +62,7 @@ public class ReferenceRangeService {
     }
 
     private ReferenceRange mapToEntity(final ReferenceRangeDTO referenceRangeDTO,
-            final ReferenceRange referenceRange) {
+                                       final ReferenceRange referenceRange) {
         referenceRange.setSex(referenceRangeDTO.getSex());
         referenceRange.setAgeMinYears(referenceRangeDTO.getAgeMinYears());
         referenceRange.setAgeMaxYears(referenceRangeDTO.getAgeMaxYears());
@@ -95,16 +76,4 @@ public class ReferenceRangeService {
         referenceRange.setExamItem(examItem);
         return referenceRange;
     }
-
-    @EventListener(BeforeDeleteExamItem.class)
-    public void on(final BeforeDeleteExamItem event) {
-        final ReferencedException referencedException = new ReferencedException();
-        final ReferenceRange examItemReferenceRange = referenceRangeRepository.findFirstByExamItemId(event.getId()).orElse(null);
-        if (examItemReferenceRange != null) {
-            referencedException.setKey("examItem.referenceRange.examItem.referenced");
-            referencedException.addParam(examItemReferenceRange.getId());
-            throw referencedException;
-        }
-    }
-
 }

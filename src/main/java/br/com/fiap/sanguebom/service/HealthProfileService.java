@@ -1,14 +1,12 @@
 package br.com.fiap.sanguebom.service;
 
-import br.com.fiap.sanguebom.domain.AppUser;
-import br.com.fiap.sanguebom.domain.HealthProfile;
-import br.com.fiap.sanguebom.events.BeforeDeleteAppUser;
-import br.com.fiap.sanguebom.model.HealthProfileDTO;
-import br.com.fiap.sanguebom.repos.AppUserRepository;
-import br.com.fiap.sanguebom.repos.HealthProfileRepository;
-import br.com.fiap.sanguebom.util.NotFoundException;
-import br.com.fiap.sanguebom.util.ReferencedException;
-import org.springframework.context.event.EventListener;
+import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.model.entities.HealthProfile;
+import br.com.fiap.sanguebom.model.dtos.HealthProfileDTO;
+import br.com.fiap.sanguebom.repository.AppUserRepository;
+import br.com.fiap.sanguebom.repository.HealthProfileRepository;
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -16,16 +14,11 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class HealthProfileService {
 
     private final HealthProfileRepository healthProfileRepository;
     private final AppUserRepository appUserRepository;
-
-    public HealthProfileService(final HealthProfileRepository healthProfileRepository,
-            final AppUserRepository appUserRepository) {
-        this.healthProfileRepository = healthProfileRepository;
-        this.appUserRepository = appUserRepository;
-    }
 
     public List<HealthProfileDTO> findAll() {
         final List<HealthProfile> healthProfiles = healthProfileRepository.findAll(Sort.by("id"));
@@ -53,14 +46,8 @@ public class HealthProfileService {
         healthProfileRepository.save(healthProfile);
     }
 
-    public void delete(final Long id) {
-        final HealthProfile healthProfile = healthProfileRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        healthProfileRepository.delete(healthProfile);
-    }
-
     private HealthProfileDTO mapToDTO(final HealthProfile healthProfile,
-            final HealthProfileDTO healthProfileDTO) {
+                                      final HealthProfileDTO healthProfileDTO) {
         healthProfileDTO.setId(healthProfile.getId());
         healthProfileDTO.setSex(healthProfile.getSex());
         healthProfileDTO.setHeightCm(healthProfile.getHeightCm());
@@ -74,7 +61,7 @@ public class HealthProfileService {
     }
 
     private HealthProfile mapToEntity(final HealthProfileDTO healthProfileDTO,
-            final HealthProfile healthProfile) {
+                                      final HealthProfile healthProfile) {
         healthProfile.setSex(healthProfileDTO.getSex());
         healthProfile.setHeightCm(healthProfileDTO.getHeightCm());
         healthProfile.setWeightKg(healthProfileDTO.getWeightKg());
@@ -87,16 +74,4 @@ public class HealthProfileService {
         healthProfile.setUser(user);
         return healthProfile;
     }
-
-    @EventListener(BeforeDeleteAppUser.class)
-    public void on(final BeforeDeleteAppUser event) {
-        final ReferencedException referencedException = new ReferencedException();
-        final HealthProfile userHealthProfile = healthProfileRepository.findFirstByUserId(event.getId()).orElse(null);
-        if (userHealthProfile != null) {
-            referencedException.setKey("appUser.healthProfile.user.referenced");
-            referencedException.addParam(userHealthProfile.getId());
-            throw referencedException;
-        }
-    }
-
 }
