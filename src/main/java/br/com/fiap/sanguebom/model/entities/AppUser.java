@@ -1,6 +1,5 @@
 package br.com.fiap.sanguebom.model.entities;
 
-import br.com.fiap.sanguebom.model.enums.AppUserSex;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -50,10 +49,6 @@ public class AppUser {
     @Column(length = 20)
     private String status;
 
-    @Column(length = 1)
-    @Enumerated(EnumType.STRING)
-    private AppUserSex sex;
-
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -62,8 +57,8 @@ public class AppUser {
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
 
-    @OneToMany(mappedBy = "user")
-    private Set<HealthProfile> userHealthProfiles = new HashSet<>();
+    @OneToOne(mappedBy = "user")
+    private HealthProfile healthProfile;
 
     @OneToMany(mappedBy = "user")
     private Set<Exam> userExams = new HashSet<>();

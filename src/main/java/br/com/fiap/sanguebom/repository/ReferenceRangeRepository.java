@@ -1,7 +1,7 @@
 package br.com.fiap.sanguebom.repository;
 
 import br.com.fiap.sanguebom.model.entities.ReferenceRange;
-import br.com.fiap.sanguebom.model.enums.AppUserSex;
+import br.com.fiap.sanguebom.model.enums.Sex;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,7 +27,7 @@ public interface ReferenceRangeRepository extends JpaRepository<ReferenceRange, 
 """)
     Optional<ReferenceRange> findApplicableRangeForUserByExamItem(
             @Param("examItemId") Long examItemId,
-            @Param("sex") AppUserSex sex,
+            @Param("sex") Sex sex,
             @Param("age") long age
     );
 }

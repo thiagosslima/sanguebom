@@ -1,10 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.exception.NotFoundException;
-import br.com.fiap.sanguebom.exception.ReferencedException;
 import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamMapper;
 import br.com.fiap.sanguebom.model.ExamResult.ExamResultDTO;
+import br.com.fiap.sanguebom.model.enums.Sex;
 import br.com.fiap.sanguebom.model.exam.ExamRecoverDTO;
 import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
@@ -14,9 +14,9 @@ import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
 import br.com.fiap.sanguebom.repository.*;
 import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -85,6 +85,7 @@ public class ExamService {
                 .orElseThrow(NotFoundException::new);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Long create(final ExamCreateDTO examDTO) {
 
         AppUser user = userServiceHelper.getUserByIdOrFail(examDTO.userId());
@@ -98,14 +99,15 @@ public class ExamService {
         Map<Long, ExamItem> examItemMap = new HashMap<>();
 
         examResultList.forEach(examResultDTO -> {
-            ExamItem examItem = examItemRepository.findActiveById(examResultDTO.examItemId()).orElseThrow(() -> new NotFoundException(String.format("Item de exame não encontrado para o id: %d", examResultDTO.examItemId())));
+            ExamItem examItem = examItemRepository.findActiveById(examResultDTO.examItemId()).orElseThrow(()
+                    -> new NotFoundException(String.format("Item de exame não encontrado para o id: %d", examResultDTO.examItemId())));
             examItemMap.put(examResultDTO.examItemId(), examItem);
         });
 
         throwCaseThereAreDuplicatedExamResult(examResultList);
 
-
         final Exam exam = examMapper.toEntity(examDTO);
+
         exam.setStatus(ExamStatus.COLLECTED);
         exam.setHealthUnit(healthUnit);
         exam.setUser(user);
@@ -132,10 +134,11 @@ public class ExamService {
         for(ExamResult examResult : examResults) {
 
             long userAge = ChronoUnit.YEARS.between(user.getBirthDate(), LocalDate.now());
+            Sex userSex = user.getHealthProfile().getSex();
 
             ReferenceRange referenceRange = referenceRangeRepository.findApplicableRangeForUserByExamItem(
                     examResult.getExamItem().getId(),
-                    user.getSex(),
+                    userSex,
                     userAge
             ).orElseThrow(() -> new NotFoundException(
                     String.format("Faixa de referência não encontrada para o item de exame %d", examResult.getExamItem().getId()))

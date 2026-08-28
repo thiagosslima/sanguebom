@@ -10,7 +10,7 @@ import java.util.Set;
 
 public record ExamCreateDTO(
 
-        @NotBlank
+        @NotNull
         OffsetDateTime collectedAt,
 
         @Size(max = 100)
