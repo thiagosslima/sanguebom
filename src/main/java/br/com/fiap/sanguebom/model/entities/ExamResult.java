@@ -1,13 +1,14 @@
 package br.com.fiap.sanguebom.model.entities;
 
+import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 
 
 @Entity
@@ -41,7 +42,8 @@ public class ExamResult {
     private String unit;
 
     @Column(length = 30)
-    private String flag;
+    @Enumerated(EnumType.STRING)
+    private ExamResultFlag flag;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -54,4 +56,5 @@ public class ExamResult {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_item_id")
     private ExamItem examItem;
+
 }

@@ -4,15 +4,19 @@ import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.entities.RiskAssessment;
 import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
+import br.com.fiap.sanguebom.model.exam.ExamAnalysisScore;
+import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 
 
 @Service
@@ -22,6 +26,33 @@ public class RiskAssessmentService {
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final AppUserRepository appUserRepository;
     private final ExamRepository examRepository;
+    private final RiskAssessmentClassifier riskAssessmentClassifier;
+
+    public RiskAssessment createRiskAssessment(
+            Exam exam,
+            AppUser user,
+            ExamAnalysisScore analysisResult
+    ) {
+
+        RiskClassification classification =
+                riskAssessmentClassifier.classify(
+                        analysisResult.finalScore(),
+                        Locale.getDefault()
+                );
+
+        RiskAssessment riskAssessment =
+                new RiskAssessment();
+
+        riskAssessment.setExam(exam);
+        riskAssessment.setUser(user);
+
+        riskAssessment.applyAssessment(
+                analysisResult.finalScore(),
+                classification
+        );
+
+        return riskAssessment;
+    }
 
     public List<RiskAssessmentDTO> findAll() {
         final List<RiskAssessment> riskAssessments = riskAssessmentRepository.findAll(Sort.by("id"));
@@ -34,12 +65,6 @@ public class RiskAssessmentService {
         return riskAssessmentRepository.findById(id)
                 .map(riskAssessment -> mapToDTO(riskAssessment, new RiskAssessmentDTO()))
                 .orElseThrow(NotFoundException::new);
-    }
-
-    public Long create(final RiskAssessmentDTO riskAssessmentDTO) {
-        final RiskAssessment riskAssessment = new RiskAssessment();
-        mapToEntity(riskAssessmentDTO, riskAssessment);
-        return riskAssessmentRepository.save(riskAssessment).getId();
     }
 
     public void update(final Long id, final RiskAssessmentDTO riskAssessmentDTO) {

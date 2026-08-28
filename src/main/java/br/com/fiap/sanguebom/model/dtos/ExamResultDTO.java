@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
@@ -29,7 +30,7 @@ public class ExamResultDTO {
     private String unit;
 
     @Size(max = 30)
-    private String flag;
+    private ExamResultFlag flag;
 
     private OffsetDateTime createdAt;
 

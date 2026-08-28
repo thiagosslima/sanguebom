@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.entities;
 
+import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,7 +40,8 @@ public class Exam {
     private OffsetDateTime releasedAt;
 
     @Column(length = 30)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private ExamStatus status;
 
     @Column(length = 100)
     private String externalReference;
@@ -57,8 +59,10 @@ public class Exam {
     private HealthUnit healthUnit;
 
     @OneToMany(mappedBy = "exam")
-    private Set<ExamResult> examExamResults = new HashSet<>();
+    private Set<ExamResult> examResults = new HashSet<>();
 
-    @OneToMany(mappedBy = "exam")
-    private Set<RiskAssessment> examRiskAssessments = new HashSet<>();
+    @OneToOne(mappedBy = "exam")
+    private RiskAssessment riskAssessment;
+
+
 }

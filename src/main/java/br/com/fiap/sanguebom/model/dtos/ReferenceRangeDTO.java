@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.Sex;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
@@ -19,7 +20,7 @@ public class ReferenceRangeDTO {
     private Long id;
 
     @Size(max = 20)
-    private String sex;
+    private Sex sex;
 
     @Digits(integer = 5, fraction = 2)
     @JsonFormat(shape = JsonFormat.Shape.STRING)

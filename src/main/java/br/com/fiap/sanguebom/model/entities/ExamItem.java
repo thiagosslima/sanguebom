@@ -55,8 +55,6 @@ public class ExamItem {
     private OffsetDateTime createdAt;
 
     @OneToMany(mappedBy = "examItem")
-    private Set<ExamResult> examItemExamResults = new HashSet<>();
+    private Set<ReferenceRange> referenceRanges = new HashSet<>();
 
-    @OneToMany(mappedBy = "examItem")
-    private Set<ReferenceRange> examItemReferenceRanges = new HashSet<>();
 }

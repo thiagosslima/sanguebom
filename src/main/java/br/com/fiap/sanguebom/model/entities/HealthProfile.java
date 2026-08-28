@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.entities;
 
+import br.com.fiap.sanguebom.model.enums.Sex;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,8 +35,9 @@ public class HealthProfile {
     )
     private Long id;
 
-    @Column(length = 20)
-    private String sex;
+    @Column()
+    @Enumerated(EnumType.STRING)
+    private Sex sex;
 
     @Column(precision = 5, scale = 2)
     private BigDecimal heightCm;
@@ -58,7 +60,7 @@ public class HealthProfile {
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private AppUser user;
 }

@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
@@ -32,7 +33,7 @@ public class RuleDTO {
     private Boolean maxInclusive;
 
     @Size(max = 30)
-    private String level;
+    private ExamResultFlag level;
 
     @Digits(integer = 4, fraction = 2)
     @JsonFormat(shape = JsonFormat.Shape.STRING)

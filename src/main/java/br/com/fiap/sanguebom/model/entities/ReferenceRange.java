@@ -1,17 +1,8 @@
 package br.com.fiap.sanguebom.model.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import br.com.fiap.sanguebom.model.enums.Sex;
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -45,7 +36,8 @@ public class ReferenceRange {
     private Long id;
 
     @Column(length = 20)
-    private String sex;
+    @Enumerated(EnumType.STRING)
+    private Sex sex;
 
     @Column(precision = 5, scale = 2)
     private BigDecimal ageMinYears;

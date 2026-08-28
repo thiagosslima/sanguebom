@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.RiskAssessmentLevel;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
@@ -23,7 +24,7 @@ public class RiskAssessmentDTO {
     private BigDecimal score;
 
     @Size(max = 30)
-    private String level;
+    private RiskAssessmentLevel level;
 
     @Size(max = 30)
     private String rulesVersion;

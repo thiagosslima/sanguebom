@@ -1,16 +1,9 @@
 package br.com.fiap.sanguebom.model.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import br.com.fiap.sanguebom.model.enums.RiskAssessmentLevel;
+import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Getter;
@@ -43,8 +36,9 @@ public class RiskAssessment {
     @Column(precision = 5, scale = 2)
     private BigDecimal score;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 30)
-    private String level;
+    private RiskAssessmentLevel level;
 
     @Column(length = 30)
     private String rulesVersion;
@@ -60,7 +54,17 @@ public class RiskAssessment {
     @JoinColumn(name = "user_id")
     private AppUser user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_id")
     private Exam exam;
+
+    public void applyAssessment(
+            BigDecimal score,
+            RiskClassification classification
+    ) {
+        this.score = score;
+        this.level = classification.level();
+        this.explanation = classification.explanation();
+    }
+
 }

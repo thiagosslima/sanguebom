@@ -1,16 +1,8 @@
 package br.com.fiap.sanguebom.model.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Getter;
@@ -53,7 +45,8 @@ public class Rule {
     private Boolean maxInclusive;
 
     @Column(length = 30)
-    private String level;
+    @Enumerated(EnumType.STRING)
+    private ExamResultFlag level;
 
     @Column(precision = 4, scale = 2)
     private BigDecimal score;
@@ -74,4 +67,25 @@ public class Rule {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reference_range_id")
     private ReferenceRange referenceRange;
+
+    public boolean appliesTo(BigDecimal value) {
+
+        boolean respectsMin = true;
+        boolean respectsMax = true;
+
+        if (minValue != null) {
+            respectsMin = Boolean.TRUE.equals(minInclusive)
+                    ? value.compareTo(minValue) >= 0
+                    : value.compareTo(minValue) > 0;
+        }
+
+        if (maxValue != null) {
+            respectsMax = Boolean.TRUE.equals(maxInclusive)
+                    ? value.compareTo(maxValue) <= 0
+                    : value.compareTo(maxValue) < 0;
+        }
+
+        return respectsMin && respectsMax;
+    }
+
 }

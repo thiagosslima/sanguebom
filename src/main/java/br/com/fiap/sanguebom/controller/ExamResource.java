@@ -1,6 +1,8 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.model.dtos.ExamDTO;
+import br.com.fiap.sanguebom.model.exam.ExamAnalysisResultDTO;
+import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
+import br.com.fiap.sanguebom.model.exam.ExamRecoverDTO;
 import br.com.fiap.sanguebom.service.ExamService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
@@ -23,26 +25,28 @@ public class ExamResource {
     }
 
     @GetMapping
-    public ResponseEntity<List<ExamDTO>> getAllExams() {
+    public ResponseEntity<List<ExamRecoverDTO>> getAllExams() {
         return ResponseEntity.ok(examService.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ExamDTO> getExam(@PathVariable(name = "id") final Long id) {
+    public ResponseEntity<ExamRecoverDTO> getExam(@PathVariable(name = "id") final Long id) {
         return ResponseEntity.ok(examService.get(id));
     }
 
     @PostMapping
     @ApiResponse(responseCode = "201")
-    public ResponseEntity<Long> createExam(@RequestBody @Valid final ExamDTO examDTO) {
-        final Long createdId = examService.create(examDTO);
-        return new ResponseEntity<>(createdId, HttpStatus.CREATED);
+    public ResponseEntity<ExamAnalysisResultDTO> createExam(@RequestBody @Valid final ExamCreateDTO examDTO) {
+        final ExamAnalysisResultDTO created = examService.create(examDTO);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateExam(@PathVariable(name = "id") final Long id,
-            @RequestBody @Valid final ExamDTO examDTO) {
-        examService.update(id, examDTO);
+            @RequestBody @Valid final ExamRecoverDTO examRecoverDTO) {
+        examService.update(id, examRecoverDTO);
         return ResponseEntity.ok(id);
     }
+
+
 }

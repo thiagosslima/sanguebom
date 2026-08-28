@@ -49,9 +49,6 @@ public class AppUser {
     @Column(length = 20)
     private String status;
 
-    @Column(length = 1)
-    private String sex;
-
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -60,8 +57,8 @@ public class AppUser {
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
 
-    @OneToMany(mappedBy = "user")
-    private Set<HealthProfile> userHealthProfiles = new HashSet<>();
+    @OneToOne(mappedBy = "user")
+    private HealthProfile healthProfile;
 
     @OneToMany(mappedBy = "user")
     private Set<Exam> userExams = new HashSet<>();
