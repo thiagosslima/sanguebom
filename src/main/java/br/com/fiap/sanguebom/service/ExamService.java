@@ -1,27 +1,20 @@
 package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.mapper.ExamAnalysisResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamMapper;
 import br.com.fiap.sanguebom.model.ExamResult.ExamResultDTO;
-import br.com.fiap.sanguebom.model.enums.Sex;
-import br.com.fiap.sanguebom.model.exam.ExamRecoverDTO;
+import br.com.fiap.sanguebom.model.exam.*;
 import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
-import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
-import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
 import br.com.fiap.sanguebom.repository.*;
-import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
+import br.com.fiap.sanguebom.rulesMotor.ExamAnalysisService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,7 +32,9 @@ public class ExamService {
     private final ReferenceRangeRepository referenceRangeRepository;
     private final RuleRepository ruleRepository;
     private final RiskAssessmentRepository riskAssessmentRepository;
-    private final RiskAssessmentClassifier riskAssessmentClassifier;
+    private final RiskAssessmentService riskAssessmentService;
+    private final ExamAnalysisService examAnalysisService;
+    private final ExamAnalysisResultMapper examAnalysisResultMapper;
 
     private final ExamMapper examMapper;
     private final ExamIResultMapper examIResultMapper;
@@ -55,8 +50,10 @@ public class ExamService {
                        final ReferenceRangeRepository referenceRangeRepository,
                        final RuleRepository ruleRepository,
                        final RiskAssessmentRepository riskAssessmentRepository,
-                       final RiskAssessmentClassifier riskAssessmentClassifier,
-                       ExamIResultMapper examIResultMapper) {
+                       final RiskAssessmentService riskAssessmentService,
+                       final ExamAnalysisService examAnalysisService,
+                       ExamIResultMapper examIResultMapper,
+                       ExamAnalysisResultMapper examAnalysisResultMapper) {
         this.examRepository = examRepository;
         this.appUserRepository = appUserRepository;
         this.healthUnitRepository = healthUnitRepository;
@@ -69,7 +66,9 @@ public class ExamService {
         this.referenceRangeRepository = referenceRangeRepository;
         this.ruleRepository = ruleRepository;
         this.riskAssessmentRepository = riskAssessmentRepository;
-        this.riskAssessmentClassifier = riskAssessmentClassifier;
+        this.riskAssessmentService = riskAssessmentService;
+        this.examAnalysisService = examAnalysisService;
+        this.examAnalysisResultMapper = examAnalysisResultMapper;
     }
 
     public List<ExamRecoverDTO> findAll() {
@@ -86,97 +85,148 @@ public class ExamService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Long create(final ExamCreateDTO examDTO) {
+    public ExamAnalysisResultDTO create(final ExamCreateDTO examDTO) {
 
-        AppUser user = userServiceHelper.getUserByIdOrFail(examDTO.userId());
+        ExamCreationContext context = loadContext(examDTO);
 
-        Long healthUnitId = examDTO.healthUnitId();
+        validateExamResults(examDTO.analyzedItems());
 
-        HealthUnit healthUnit = healthUnitRepository.findById(healthUnitId).orElseThrow(() -> new NotFoundException(String.format("Unidade de saúde não encontrada para o id: %d", healthUnitId)));
+        Exam exam = createExam(examDTO, context);
 
-        List<ExamResultDTO> examResultList = examDTO.analyzedItems();
+        List<ExamResult> examResults = createExamResults(
+                exam,
+                examDTO.analyzedItems(),
+                context.examItems()
+        );
 
-        Map<Long, ExamItem> examItemMap = new HashMap<>();
+        ExamAnalysisScore analysisResult =
+                examAnalysisService.analyze(
+                        exam,
+                        examResults,
+                        context.user()
+                );
 
-        examResultList.forEach(examResultDTO -> {
-            ExamItem examItem = examItemRepository.findActiveById(examResultDTO.examItemId()).orElseThrow(()
-                    -> new NotFoundException(String.format("Item de exame não encontrado para o id: %d", examResultDTO.examItemId())));
-            examItemMap.put(examResultDTO.examItemId(), examItem);
-        });
+        RiskAssessment riskAssessment =
+                riskAssessmentService.createRiskAssessment(
+                        exam,
+                        context.user(),
+                        analysisResult
+                );
 
-        throwCaseThereAreDuplicatedExamResult(examResultList);
+        RiskAssessment savedRA = riskAssessmentRepository.save(riskAssessment);
 
-        final Exam exam = examMapper.toEntity(examDTO);
+
+        return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
+
+    }
+
+    private void validateExamResults(List<ExamResultDTO> examResults) {
+
+        throwCaseThereAreDuplicatedExamResult(examResults);
+    }
+
+    private ExamCreationContext loadContext(ExamCreateDTO examDTO) {
+
+        AppUser user =
+                userServiceHelper.getUserByIdOrFail(examDTO.userId());
+
+        HealthUnit healthUnit =
+                healthUnitRepository.findById(examDTO.healthUnitId())
+                        .orElseThrow(() ->
+                                new NotFoundException(
+                                        String.format(
+                                                "Unidade de saúde não encontrada para o id: %d",
+                                                examDTO.healthUnitId()
+                                        )
+                                )
+                        );
+
+        Map<Long, ExamItem> examItems =
+                loadExamItems(examDTO.analyzedItems());
+
+        return new ExamCreationContext(
+                user,
+                healthUnit,
+                examItems
+        );
+    }
+
+    private Map<Long, ExamItem> loadExamItems(
+            List<ExamResultDTO> examResults
+    ) {
+
+        return examResults.stream()
+                .map(ExamResultDTO::examItemId)
+                .distinct()
+                .collect(Collectors.toMap(
+                        examItemId -> examItemId,
+                        this::getActiveExamItemOrFail
+                ));
+    }
+
+    private ExamItem getActiveExamItemOrFail(Long examItemId) {
+
+        return examItemRepository
+                .findActiveById(examItemId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                String.format(
+                                        "Item de exame não encontrado para o id: %d",
+                                        examItemId
+                                )
+                        )
+                );
+    }
+
+    private Exam createExam(
+            ExamCreateDTO examDTO,
+            ExamCreationContext context
+    ) {
+
+        Exam exam = examMapper.toEntity(examDTO);
 
         exam.setStatus(ExamStatus.COLLECTED);
-        exam.setHealthUnit(healthUnit);
-        exam.setUser(user);
-        Exam savedExam = examRepository.save(exam);
+        exam.setUser(context.user());
+        exam.setHealthUnit(context.healthUnit());
 
-        List<ExamResult> examResults = new ArrayList<>();
+        return examRepository.save(exam);
+    }
 
-        for (ExamResultDTO examResultDto : examResultList) {
-            ExamResult examResult = examIResultMapper.toEntity(examResultDto);
-            ExamItem examItem = examItemMap.get(examResultDto.examItemId());
-            examResult.setExam(savedExam);
-            examResult.setExamItem(examItem);
-            examResult.setUnit(examItem.getUnit());
-            examResult.setFlag(ExamResultFlag.IN_ANALYSIS);
-            examResults.add(examResult);
-        }
+    private List<ExamResult> createExamResults(
+            Exam exam,
+            List<ExamResultDTO> examResultDTOs,
+            Map<Long, ExamItem> examItems
+    ) {
 
+        List<ExamResult> examResults =
+                examResultDTOs.stream()
+                        .map(dto ->
+                                createExamResult(
+                                        exam,
+                                        dto,
+                                        examItems.get(dto.examItemId())
+                                )
+                        )
+                        .toList();
 
-        examResultRepository.saveAll(examResults);
+        return examResultRepository.saveAll(examResults);
+    }
 
-        BigDecimal totalScore = BigDecimal.ZERO;
-        int evaluatedItems = 0;
+    private ExamResult createExamResult(
+            Exam exam,
+            ExamResultDTO dto,
+            ExamItem examItem
+    ) {
 
-        for(ExamResult examResult : examResults) {
+        ExamResult examResult =
+                examIResultMapper.toEntity(dto);
 
-            long userAge = ChronoUnit.YEARS.between(user.getBirthDate(), LocalDate.now());
-            Sex userSex = user.getHealthProfile().getSex();
+        examResult.setExam(exam);
+        examResult.setExamItem(examItem);
+        examResult.setUnit(examItem.getUnit());
+        examResult.setFlag(ExamResultFlag.IN_ANALYSIS);
 
-            ReferenceRange referenceRange = referenceRangeRepository.findApplicableRangeForUserByExamItem(
-                    examResult.getExamItem().getId(),
-                    userSex,
-                    userAge
-            ).orElseThrow(() -> new NotFoundException(
-                    String.format("Faixa de referência não encontrada para o item de exame %d", examResult.getExamItem().getId()))
-            );
-
-            List<Rule> rules = ruleRepository.findByReferenceRangeId(referenceRange.getId());
-
-            Rule applicableRule = rules.stream()
-                    .filter(rule -> rule.appliesTo(examResult.getValueNumeric()))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Nehuma regra enocntrada para o valor informado "
-                    ));
-
-            examResult.setFlag(applicableRule.getLevel());
-
-            BigDecimal score = applicableRule.getScore();
-            totalScore = totalScore.add(score);
-            evaluatedItems++;
-        }
-
-        BigDecimal finalScore = totalScore.divide(
-                new BigDecimal(evaluatedItems),
-                2,
-                RoundingMode.HALF_UP);
-
-        RiskClassification result = riskAssessmentClassifier.classify(finalScore, Locale.getDefault());
-
-        RiskAssessment riskAssessment = new RiskAssessment();
-        riskAssessment.setExam(exam);
-        riskAssessment.setUser(user);
-
-        riskAssessment.applyAssessment(finalScore, result);
-
-        riskAssessmentRepository.save(riskAssessment);
-
-        return examRepository.save(exam).getId();
-
+        return examResult;
     }
 
 

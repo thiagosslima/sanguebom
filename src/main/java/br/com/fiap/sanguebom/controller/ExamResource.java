@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.controller;
 
+import br.com.fiap.sanguebom.model.exam.ExamAnalysisResultDTO;
 import br.com.fiap.sanguebom.model.exam.ExamCreateDTO;
 import br.com.fiap.sanguebom.model.exam.ExamRecoverDTO;
 import br.com.fiap.sanguebom.service.ExamService;
@@ -35,9 +36,9 @@ public class ExamResource {
 
     @PostMapping
     @ApiResponse(responseCode = "201")
-    public ResponseEntity<Long> createExam(@RequestBody @Valid final ExamCreateDTO examDTO) {
-        final Long createdId = examService.create(examDTO);
-        return new ResponseEntity<>(createdId, HttpStatus.CREATED);
+    public ResponseEntity<ExamAnalysisResultDTO> createExam(@RequestBody @Valid final ExamCreateDTO examDTO) {
+        final ExamAnalysisResultDTO created = examService.create(examDTO);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")

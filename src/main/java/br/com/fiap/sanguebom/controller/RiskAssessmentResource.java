@@ -33,13 +33,6 @@ public class RiskAssessmentResource {
         return ResponseEntity.ok(riskAssessmentService.get(id));
     }
 
-    @PostMapping
-    @ApiResponse(responseCode = "201")
-    public ResponseEntity<Long> createRiskAssessment(
-            @RequestBody @Valid final RiskAssessmentDTO riskAssessmentDTO) {
-        final Long createdId = riskAssessmentService.create(riskAssessmentDTO);
-        return new ResponseEntity<>(createdId, HttpStatus.CREATED);
-    }
 
     @PutMapping("/{id}")
     public ResponseEntity<Long> updateRiskAssessment(@PathVariable(name = "id") final Long id,
