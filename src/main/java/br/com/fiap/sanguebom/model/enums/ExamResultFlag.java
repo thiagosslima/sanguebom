@@ -8,5 +8,8 @@ public enum ExamResultFlag {
     LOW,
     HIGH,
     OPTIMAL,
-    VERY_HIGH
+    VERY_HIGH,
+
+    @Deprecated
+    ALERTA
 }
