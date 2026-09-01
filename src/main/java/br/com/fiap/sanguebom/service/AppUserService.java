@@ -50,6 +50,7 @@ public class AppUserService {
         appUserDTO.setBirthDate(appUser.getBirthDate());
         appUserDTO.setEmail(appUser.getEmail());
         appUserDTO.setStatus(appUser.getStatus());
+        appUserDTO.setSex(appUser.getSex());
         appUserDTO.setCreatedAt(appUser.getCreatedAt());
         appUserDTO.setUpdatedAt(appUser.getUpdatedAt());
         return appUserDTO;
@@ -61,6 +62,7 @@ public class AppUserService {
         appUser.setBirthDate(appUserDTO.getBirthDate());
         appUser.setEmail(appUserDTO.getEmail());
         appUser.setStatus(appUserDTO.getStatus());
+        appUser.setSex(appUserDTO.getSex());
         appUser.setCreatedAt(appUserDTO.getCreatedAt());
         appUser.setUpdatedAt(appUserDTO.getUpdatedAt());
         return appUser;

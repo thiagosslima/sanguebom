@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.Sex;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,6 +28,8 @@ public class AppUserDTO {
 
     @Size(max = 20)
     private String status;
+
+    private Sex sex;
 
     private OffsetDateTime createdAt;
 
