@@ -38,8 +38,8 @@ public class RiskAssessmentClassifier {
 
     private String getMessageKey(RiskAssessmentLevel level) {
         return switch (level) {
-            case LOW -> "risk-assessment.level.low.explanation";
-            case MODERATE -> "risk-assessment.level.moderate.explanation";
+            case LOW, NORMAL -> "risk-assessment.level.low.explanation";
+            case MODERATE, ALERTA -> "risk-assessment.level.moderate.explanation";
             case HIGH -> "risk-assessment.level.high.explanation";
             case VERY_HIGH -> "risk-assessment.level.very-high.explanation";
         };

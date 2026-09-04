@@ -33,6 +33,12 @@ public class HealthProfileService {
                 .orElseThrow(NotFoundException::new);
     }
 
+    public HealthProfile getByUserId(final Long userId) {
+        return healthProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Perfil de saúde não encontrado para o usuário: %d", userId)));
+    }
+
     public Long create(final HealthProfileDTO healthProfileDTO) {
         final HealthProfile healthProfile = new HealthProfile();
         mapToEntity(healthProfileDTO, healthProfile);

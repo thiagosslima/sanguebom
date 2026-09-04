@@ -1,6 +1,13 @@
 package br.com.fiap.sanguebom.model.enums;
 
 public enum Sex {
+
     M,
-    F
+    F,
+
+    @Deprecated
+    MALE,
+
+    @Deprecated
+    FEMALE
 }
