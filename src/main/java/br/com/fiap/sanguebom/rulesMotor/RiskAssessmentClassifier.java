@@ -1,8 +1,8 @@
 package br.com.fiap.sanguebom.rulesMotor;
 
+import br.com.fiap.sanguebom.service.MessageService;
 import br.com.fiap.sanguebom.model.enums.RiskAssessmentLevel;
 import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -11,10 +11,10 @@ import java.util.Locale;
 @Component
 public class RiskAssessmentClassifier {
 
-    private final MessageSource messageSource;
+    private final MessageService messageService;
 
-    public RiskAssessmentClassifier(MessageSource messageSource) {
-        this.messageSource = messageSource;
+    public RiskAssessmentClassifier(MessageService messageService) {
+        this.messageService = messageService;
     }
 
     public RiskClassification classify(
@@ -24,9 +24,8 @@ public class RiskAssessmentClassifier {
 
         RiskAssessmentLevel level = RiskAssessmentLevelResolver.resolve(score);
 
-        String explanation = messageSource.getMessage(
+        String explanation = messageService.getMessage(
                 getMessageKey(level),
-                null,
                 locale
         );
 

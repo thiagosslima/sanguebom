@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.exception.DuplicatedExamResultException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.mapper.ExamAnalysisResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
@@ -74,22 +75,22 @@ public class ExamService {
     public List<ExamRecoverDTO> findAll() {
         final List<Exam> exams = examRepository.findAll(Sort.by("id"));
         return exams.stream()
-                .map(exam -> examMapper.toDTO(exam))
+                .map(examMapper::toDTO)
                 .toList();
     }
 
     public ExamRecoverDTO get(final Long id) {
         return examRepository.findById(id)
-                .map(exam -> examMapper.toDTO(exam))
+                .map(examMapper::toDTO)
                 .orElseThrow(NotFoundException::new);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ExamAnalysisResultDTO create(final ExamCreateDTO examDTO) {
 
-        ExamCreationContext context = loadContext(examDTO);
-
         validateExamResults(examDTO.analyzedItems());
+
+        ExamCreationContext context = loadContext(examDTO);
 
         Exam exam = createExam(examDTO, context);
 
@@ -231,19 +232,16 @@ public class ExamService {
 
 
 
-    private static void throwCaseThereAreDuplicatedExamResult(List<ExamResultDTO> examResultList) {
+    private void throwCaseThereAreDuplicatedExamResult(List<ExamResultDTO> examResultList) {
         Set<Long> examResultsIds = examResultList.stream()
                 .map(ExamResultDTO::examItemId)
                 .collect(Collectors.toSet());
 
         if(examResultsIds.size() != examResultList.size()){
-            throw new IllegalArgumentException("Não pode haver itens de exame duplicados");
+            throw new DuplicatedExamResultException("Não pode haver itens de exame duplicados");
         }
     }
 
-    private void checkIfAllExamItemsExist(List<ExamResultDTO> examResultList) {
-
-    }
 
     public void update(final Long id, final ExamRecoverDTO examRecoverDTO) {
         examRepository.findById(id)

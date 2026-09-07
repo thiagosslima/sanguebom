@@ -10,7 +10,6 @@ import br.com.fiap.sanguebom.model.userexam.ExamSummaryDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.ExamResultRepository;
-import org.springframework.context.MessageSource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -28,16 +27,16 @@ public class UserExamService {
     private final ExamRepository examRepository;
     private final ExamResultRepository examResultRepository;
     private final UserExamMapper userExamMapper;
-    private final MessageSource messageSource;
+    private final MessageService messageService;
 
     public UserExamService(final ExamRepository examRepository,
             final ExamResultRepository examResultRepository,
             final UserExamMapper userExamMapper,
-            final MessageSource messageSource) {
+            final MessageService messageService) {
         this.examRepository = examRepository;
         this.examResultRepository = examResultRepository;
         this.userExamMapper = userExamMapper;
-        this.messageSource = messageSource;
+        this.messageService = messageService;
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +63,7 @@ public class UserExamService {
                 risk == null ? null : risk.getScore(),
                 risk == null ? null : risk.getLevel(),
                 risk == null ? null : risk.getExplanation(),
-                messageSource.getMessage(DISCLAIMER_KEY, null, locale));
+                messageService.getMessage(DISCLAIMER_KEY, locale));
     }
 
 }
