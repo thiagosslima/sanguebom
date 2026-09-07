@@ -10,11 +10,13 @@ import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import br.com.fiap.sanguebom.repository.*;
-import br.com.fiap.sanguebom.rulesMotor.ExamAnalysisService;
+import br.com.fiap.sanguebom.rulesMotor.exam.ExamAnalysisService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -99,6 +101,8 @@ public class ExamService {
                 context.examItems()
         );
 
+        examInAnalysis(exam);
+
         ExamAnalysisScore analysisResult =
                 examAnalysisService.analyze(
                         exam,
@@ -115,9 +119,20 @@ public class ExamService {
 
         RiskAssessment savedRA = riskAssessmentRepository.save(riskAssessment);
 
+        finishExamAnalysis(exam);
 
         return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
 
+    }
+
+    private void finishExamAnalysis(Exam exam) {
+        exam.setReleasedAt(OffsetDateTime.now());
+        exam.setStatus(ExamStatus.RELEASED);
+        examRepository.save(exam);
+    }
+
+    private void examInAnalysis(Exam exam) {
+        examRepository.updateExamStatusById(exam.getId(), ExamStatus.IN_ANALYSIS);
     }
 
     private void validateExamResults(List<ExamResultDTO> examResults) {
