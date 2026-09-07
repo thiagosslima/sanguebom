@@ -1,6 +1,7 @@
 package br.com.fiap.sanguebom.repository;
 
 import br.com.fiap.sanguebom.model.entities.Exam;
+import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -34,4 +35,16 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
     List<Exam> findByUserIdAndIdInWithResults(
             @Param("userId") Long userId,
             @Param("examIds") Collection<Long> examIds);
+
+    void updateExamStatusById(Long id, ExamStatus status);
+
+    @Query("SELECT COUNT(e) FROM Exam e WHERE e.user.id = :userId AND e.status = :status")
+    long countByStatusAndUserId(Long userId, ExamStatus status);
+
+    @Query("""
+        SELECT e FROM Exam e 
+            WHERE e.user.id = :userId AND e.status = br.com.fiap.sanguebom.model.enums.ExamStatus.RELEASED
+        ORDER BY e.releasedAt DESC
+                """)
+    List<Exam> findLatestReleasedByUserId(Long userId);
 }
