@@ -17,11 +17,7 @@ public class HealthChampionAchievementRule extends AchievementRuleParent impleme
     }
 
     @Override
-    public Boolean isEligible(AchievementContext context) {
-
-        if(alreadyHasAchievement(context)){
-            return false;
-        }
+    public boolean isEligible(AchievementContext context) {
 
         BigDecimal score = context.riskAssessment().getScore();
 

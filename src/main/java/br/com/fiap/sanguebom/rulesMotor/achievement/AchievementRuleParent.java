@@ -10,7 +10,7 @@ public abstract class AchievementRuleParent {
     protected abstract AchivementCode getAchievementCode();
 
     public boolean alreadyHasAchievement(AchievementContext context) {
-        return context.achievements()
+        return context.user().getUserAchievements()
                 .stream()
                 .map(UserAchievement::getAchievement)
                 .anyMatch(achievement ->

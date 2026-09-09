@@ -11,6 +11,7 @@ import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import br.com.fiap.sanguebom.repository.*;
+import br.com.fiap.sanguebom.rulesMotor.achievement.AchievementEvaluator;
 import br.com.fiap.sanguebom.rulesMotor.exam.ExamAnalysisService;
 import br.com.fiap.sanguebom.service.notification.ExamNotificationService;
 import org.springframework.data.domain.Sort;
@@ -37,6 +38,7 @@ public class ExamService {
     private final RiskAssessmentService riskAssessmentService;
     private final ExamAnalysisService examAnalysisService;
     private final ExamAnalysisResultMapper examAnalysisResultMapper;
+    private final AchievementEvaluator achievementEvaluator;
     private final ExamNotificationService examNotificationService;
     private final Clock clock;
 
@@ -55,6 +57,7 @@ public class ExamService {
                        final RiskAssessmentRepository riskAssessmentRepository,
                        final RiskAssessmentService riskAssessmentService,
                        final ExamAnalysisService examAnalysisService,
+                       final AchievementEvaluator achievementEvaluator,
                        final ExamIResultMapper examIResultMapper,
                        final ExamAnalysisResultMapper examAnalysisResultMapper,
                        final ExamNotificationService examNotificationService,
@@ -73,6 +76,7 @@ public class ExamService {
         this.riskAssessmentService = riskAssessmentService;
         this.examAnalysisService = examAnalysisService;
         this.examAnalysisResultMapper = examAnalysisResultMapper;
+        this.achievementEvaluator = achievementEvaluator;
         this.examNotificationService = examNotificationService;
         this.clock = clock;
     }
@@ -126,6 +130,8 @@ public class ExamService {
         finishExamAnalysis(exam);
 
         examNotificationService.notifyResultAvailable(exam);
+
+        achievementEvaluator.evaluate(context.user(), exam, riskAssessment);
 
         return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
 

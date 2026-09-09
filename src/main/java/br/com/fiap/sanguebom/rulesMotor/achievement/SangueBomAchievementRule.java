@@ -21,15 +21,11 @@ public class SangueBomAchievementRule extends AchievementRuleParent implements A
     }
 
     @Override
-    public Boolean isEligible(AchievementContext context) {
+    public boolean isEligible(AchievementContext context) {
 
     long processed = examRepository.countByStatusAndUserId(
             context.user().getId(),
             ExamStatus.RELEASED);
-
-    if(alreadyHasAchievement(context)){
-        return false;
-    }
 
         return processed>=1;
     }

@@ -29,11 +29,7 @@ public class PunctualAchievementRule extends AchievementRuleParent implements Ac
     }
 
     @Override
-    public Boolean isEligible(AchievementContext context) {
-
-        if(alreadyHasAchievement(context)){
-            return false;
-        }
+    public boolean isEligible(AchievementContext context) {
 
         List<Exam> exams = examRepository.findLatestReleasedByUserId(context.user().getId());
 
@@ -49,7 +45,7 @@ public class PunctualAchievementRule extends AchievementRuleParent implements Ac
                         .getHealthProfile()
                         .getExamPeriodicity();
 
-        LocalDate deadLine = calculateDeadLine(lastExam.getCollectedAt(), periodicity);
+        LocalDate deadLine = calculateDeadLine(previusExam.getCollectedAt(), periodicity);
 
         boolean isPunctual = lastExam.getCollectedAt().toLocalDate().isBefore(deadLine);
 
