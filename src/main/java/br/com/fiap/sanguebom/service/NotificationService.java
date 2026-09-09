@@ -55,6 +55,7 @@ public class NotificationService {
         notificationDTO.setScheduledAt(notification.getScheduledAt());
         notificationDTO.setSentAt(notification.getSentAt());
         notificationDTO.setStatus(notification.getStatus());
+        notificationDTO.setReferenceKey(notification.getReferenceKey());
         notificationDTO.setCreatedAt(notification.getCreatedAt());
         notificationDTO.setUser(notification.getUser() == null ? null : notification.getUser().getId());
         return notificationDTO;
@@ -68,6 +69,7 @@ public class NotificationService {
         notification.setScheduledAt(notificationDTO.getScheduledAt());
         notification.setSentAt(notificationDTO.getSentAt());
         notification.setStatus(notificationDTO.getStatus());
+        notification.setReferenceKey(notificationDTO.getReferenceKey());
         notification.setCreatedAt(notificationDTO.getCreatedAt());
         final AppUser user = notificationDTO.getUser() == null ? null : appUserRepository.findById(notificationDTO.getUser())
                 .orElseThrow(() -> new NotFoundException("user not found"));
