@@ -10,6 +10,7 @@ import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import br.com.fiap.sanguebom.repository.*;
+import br.com.fiap.sanguebom.rulesMotor.achievement.AchievementEvaluator;
 import br.com.fiap.sanguebom.rulesMotor.exam.ExamAnalysisService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
@@ -37,6 +38,7 @@ public class ExamService {
     private final RiskAssessmentService riskAssessmentService;
     private final ExamAnalysisService examAnalysisService;
     private final ExamAnalysisResultMapper examAnalysisResultMapper;
+    private final AchievementEvaluator achievementEvaluator;
 
     private final ExamMapper examMapper;
     private final ExamIResultMapper examIResultMapper;
@@ -54,6 +56,7 @@ public class ExamService {
                        final RiskAssessmentRepository riskAssessmentRepository,
                        final RiskAssessmentService riskAssessmentService,
                        final ExamAnalysisService examAnalysisService,
+                       final AchievementEvaluator achievementEvaluator,
                        ExamIResultMapper examIResultMapper,
                        ExamAnalysisResultMapper examAnalysisResultMapper) {
         this.examRepository = examRepository;
@@ -71,6 +74,7 @@ public class ExamService {
         this.riskAssessmentService = riskAssessmentService;
         this.examAnalysisService = examAnalysisService;
         this.examAnalysisResultMapper = examAnalysisResultMapper;
+        this.achievementEvaluator = achievementEvaluator;
     }
 
     public List<ExamRecoverDTO> findAll() {
@@ -120,6 +124,8 @@ public class ExamService {
         RiskAssessment savedRA = riskAssessmentRepository.save(riskAssessment);
 
         finishExamAnalysis(exam);
+
+        achievementEvaluator.evaluate(context.user(), exam, riskAssessment);
 
         return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
 

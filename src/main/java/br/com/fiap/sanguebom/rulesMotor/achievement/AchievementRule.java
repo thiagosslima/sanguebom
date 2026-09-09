@@ -6,6 +6,8 @@ public interface AchievementRule {
 
     AchivementCode getAchievementCode();
 
-    Boolean isEligible(AchievementContext context);
+    boolean isEligible(AchievementContext context);
+
+    boolean alreadyHasAchievement(AchievementContext context);
 
 }
