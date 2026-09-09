@@ -1,14 +1,23 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.mapper.ExamItemCatalogMapper;
 import br.com.fiap.sanguebom.model.entities.ExamItem;
+import br.com.fiap.sanguebom.model.catalog.ExamItemCatalogDTO;
+import br.com.fiap.sanguebom.model.catalog.ReferenceRangeCatalogDTO;
 import br.com.fiap.sanguebom.model.dtos.ExamItemDTO;
+import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.ExamItemRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 
 
@@ -17,7 +26,36 @@ import java.util.List;
 public class ExamItemService {
 
     private final ExamItemRepository examItemRepository;
+    private final ReferenceRangeRepository referenceRangeRepository;
     private final ApplicationEventPublisher publisher;
+    private final Clock clock;
+    private final ExamItemCatalogMapper examItemCatalogMapper;
+
+    @Transactional(readOnly = true)
+    public PageResponse<ExamItemCatalogDTO> findActiveCatalogItems(
+            final String category,
+            final int page,
+            final int size) {
+        final var pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+        final var items = blankToNull(category) == null
+                ? examItemRepository.findActiveCatalogItems(pageable)
+                : examItemRepository.findActiveCatalogItemsByCategory(category.trim(), pageable);
+
+        return PageResponse.of(items.map(examItemCatalogMapper::toCatalogDTO));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReferenceRangeCatalogDTO> findCurrentReferenceRanges(final String itemCode) {
+        final ExamItem examItem = examItemRepository.findActiveByCode(itemCode)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Item de exame ativo não encontrado para o código: %s", itemCode)));
+
+        return referenceRangeRepository
+                .findCurrentRangesByExamItemId(examItem.getId(), LocalDate.now(clock))
+                .stream()
+                .map(examItemCatalogMapper::toReferenceRangeCatalogDTO)
+                .toList();
+    }
 
     public List<ExamItemDTO> findAll() {
         final List<ExamItem> examItems = examItemRepository.findAll(Sort.by("id"));
@@ -66,6 +104,10 @@ public class ExamItemService {
         examItem.setActive(examItemDTO.getActive());
         examItem.setCreatedAt(examItemDTO.getCreatedAt());
         return examItem;
+    }
+
+    private static String blankToNull(final String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
 }
