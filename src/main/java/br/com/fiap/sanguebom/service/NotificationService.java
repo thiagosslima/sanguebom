@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.exception.BadRequestException;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Notification;
 import br.com.fiap.sanguebom.model.dtos.NotificationDTO;
@@ -7,6 +8,7 @@ import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.NotificationRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -20,30 +22,51 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final AppUserRepository appUserRepository;
 
-    public List<NotificationDTO> findAll() {
+    public List<NotificationDTO> findAll(final Long appUserId, final String status) {
         final List<Notification> notifications = notificationRepository.findAll(Sort.by("id"));
+
         return notifications.stream()
+                .filter(notification -> appUserId == null
+                        || (notification.getUser() != null && notification.getUser().getId().equals(appUserId)))
+                .filter(notification -> status == null
+                        || (notification.getStatus() != null && notification.getStatus().equals(status)))
                 .map(notification -> mapToDTO(notification, new NotificationDTO()))
                 .toList();
     }
 
-    public NotificationDTO get(final Long id) {
+    public NotificationDTO get(Long id) {
         return notificationRepository.findById(id)
                 .map(notification -> mapToDTO(notification, new NotificationDTO()))
-                .orElseThrow(NotFoundException::new);
+                .orElseThrow(() -> new NotFoundException("Notification not found"));
     }
 
     public Long create(final NotificationDTO notificationDTO) {
         final Notification notification = new Notification();
-        mapToEntity(notificationDTO, notification);
-        return notificationRepository.save(notification).getId();
+
+        try{
+            mapToEntity(notificationDTO, notification);
+            return notificationRepository.save(notification).getId();
+        } catch (DataAccessException e) {
+            throw new BadRequestException("Error creating notification: " + e.getMessage());
+        }
     }
 
     public void update(final Long id, final NotificationDTO notificationDTO) {
         final Notification notification = notificationRepository.findById(id)
-                .orElseThrow(NotFoundException::new);
-        mapToEntity(notificationDTO, notification);
-        notificationRepository.save(notification);
+                .orElseThrow(() -> new NotFoundException("Notification not found"));
+
+        try{
+            mapToEntity(notificationDTO, notification);
+            notificationRepository.save(notification);
+        } catch (DataAccessException e) {
+            throw new BadRequestException("Error updating notification: " + e.getMessage());
+        }
+    }
+
+    public void delete(final Long id) {
+        final Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Notification not found"));
+        notificationRepository.delete(notification);
     }
 
     private NotificationDTO mapToDTO(final Notification notification,
@@ -70,7 +93,7 @@ public class NotificationService {
         notification.setStatus(notificationDTO.getStatus());
         notification.setCreatedAt(notificationDTO.getCreatedAt());
         final AppUser user = notificationDTO.getUser() == null ? null : appUserRepository.findById(notificationDTO.getUser())
-                .orElseThrow(() -> new NotFoundException("user not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         notification.setUser(user);
         return notification;
     }
