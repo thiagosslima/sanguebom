@@ -70,5 +70,5 @@ public class AppUser {
     private Set<Notification> userNotifications = new HashSet<>();
 
     @OneToMany(mappedBy = "user")
-    private Set<UserAchievement> userUserAchievements = new HashSet<>();
+    private Set<UserAchievement> userAchievements = new HashSet<>();
 }

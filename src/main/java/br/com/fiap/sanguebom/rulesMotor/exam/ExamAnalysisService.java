@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.rulesMotor;
+package br.com.fiap.sanguebom.rulesMotor.exam;
 
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.model.entities.*;

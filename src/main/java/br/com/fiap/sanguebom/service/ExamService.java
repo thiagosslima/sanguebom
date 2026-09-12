@@ -10,11 +10,14 @@ import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import br.com.fiap.sanguebom.repository.*;
-import br.com.fiap.sanguebom.rulesMotor.ExamAnalysisService;
+import br.com.fiap.sanguebom.rulesMotor.achievement.AchievementEvaluator;
+import br.com.fiap.sanguebom.rulesMotor.exam.ExamAnalysisService;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,6 +38,7 @@ public class ExamService {
     private final RiskAssessmentService riskAssessmentService;
     private final ExamAnalysisService examAnalysisService;
     private final ExamAnalysisResultMapper examAnalysisResultMapper;
+    private final AchievementEvaluator achievementEvaluator;
 
     private final ExamMapper examMapper;
     private final ExamIResultMapper examIResultMapper;
@@ -52,6 +56,7 @@ public class ExamService {
                        final RiskAssessmentRepository riskAssessmentRepository,
                        final RiskAssessmentService riskAssessmentService,
                        final ExamAnalysisService examAnalysisService,
+                       final AchievementEvaluator achievementEvaluator,
                        ExamIResultMapper examIResultMapper,
                        ExamAnalysisResultMapper examAnalysisResultMapper) {
         this.examRepository = examRepository;
@@ -69,6 +74,7 @@ public class ExamService {
         this.riskAssessmentService = riskAssessmentService;
         this.examAnalysisService = examAnalysisService;
         this.examAnalysisResultMapper = examAnalysisResultMapper;
+        this.achievementEvaluator = achievementEvaluator;
     }
 
     public List<ExamRecoverDTO> findAll() {
@@ -99,6 +105,8 @@ public class ExamService {
                 context.examItems()
         );
 
+        examInAnalysis(exam);
+
         ExamAnalysisScore analysisResult =
                 examAnalysisService.analyze(
                         exam,
@@ -115,9 +123,22 @@ public class ExamService {
 
         RiskAssessment savedRA = riskAssessmentRepository.save(riskAssessment);
 
+        finishExamAnalysis(exam);
+
+        achievementEvaluator.evaluate(context.user(), exam, riskAssessment);
 
         return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
 
+    }
+
+    private void finishExamAnalysis(Exam exam) {
+        exam.setReleasedAt(OffsetDateTime.now());
+        exam.setStatus(ExamStatus.RELEASED);
+        examRepository.save(exam);
+    }
+
+    private void examInAnalysis(Exam exam) {
+        examRepository.updateExamStatusById(exam.getId(), ExamStatus.IN_ANALYSIS);
     }
 
     private void validateExamResults(List<ExamResultDTO> examResults) {

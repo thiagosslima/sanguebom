@@ -10,7 +10,7 @@ import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
-import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
+import br.com.fiap.sanguebom.rulesMotor.exam.RiskAssessmentClassifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
