@@ -191,7 +191,7 @@ class NotificationServiceTest {
 
         assertThatThrownBy(() -> service.create(notificationDTO(USER_ID, "PENDING")))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Error creating notification");
+                .hasMessageContaining("Error ao criar a notificação");
     }
 
     // ---------------------------------------------------------------- update
@@ -244,7 +244,7 @@ class NotificationServiceTest {
 
         assertThatThrownBy(() -> service.update(NOTIFICATION_ID, notificationDTO(USER_ID, "SENT")))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Error updating notification");
+                .hasMessageContaining("Error ao atualizar a notificação");
     }
 
     // ---------------------------------------------------------------- delete

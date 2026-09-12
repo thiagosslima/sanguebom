@@ -126,7 +126,7 @@ class NotificationResourceTest {
         mockMvc.perform(get("/api/notifications/{id}", 999L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Recurso não encontrado"))
-                .andExpect(jsonPath("$.detail").value("Notification not found"));
+                .andExpect(jsonPath("$.detail").value("Notificação não encontrada"));
     }
 
     // ---------------------------------------------------------------- POST
@@ -218,7 +218,7 @@ class NotificationResourceTest {
                                 }
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.detail").value("Notification not found"));
+                .andExpect(jsonPath("$.detail").value("Notificação não encontrada"));
 
         then(appUserRepository).shouldHaveNoInteractions();
     }

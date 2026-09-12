@@ -37,7 +37,7 @@ public class NotificationService {
     public NotificationDTO get(Long id) {
         return notificationRepository.findById(id)
                 .map(notification -> mapToDTO(notification, new NotificationDTO()))
-                .orElseThrow(() -> new NotFoundException("Notification not found"));
+                .orElseThrow(() -> new NotFoundException("Notificação não encontrada"));
     }
 
     public Long create(final NotificationDTO notificationDTO) {
@@ -47,25 +47,25 @@ public class NotificationService {
             mapToEntity(notificationDTO, notification);
             return notificationRepository.save(notification).getId();
         } catch (DataAccessException e) {
-            throw new BadRequestException("Error creating notification: " + e.getMessage());
+            throw new BadRequestException("Error ao criar a notificação: " + e.getMessage());
         }
     }
 
     public void update(final Long id, final NotificationDTO notificationDTO) {
         final Notification notification = notificationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Notification not found"));
+                .orElseThrow(() -> new NotFoundException("Notificação não encontrada"));
 
         try{
             mapToEntity(notificationDTO, notification);
             notificationRepository.save(notification);
         } catch (DataAccessException e) {
-            throw new BadRequestException("Error updating notification: " + e.getMessage());
+            throw new BadRequestException("Error ao atualizar a notificação: " + e.getMessage());
         }
     }
 
     public void delete(final Long id) {
         final Notification notification = notificationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Notification not found"));
+                .orElseThrow(() -> new NotFoundException("Notificação não encontrada"));
         notificationRepository.delete(notification);
     }
 
@@ -93,7 +93,7 @@ public class NotificationService {
         notification.setStatus(notificationDTO.getStatus());
         notification.setCreatedAt(notificationDTO.getCreatedAt());
         final AppUser user = notificationDTO.getUser() == null ? null : appUserRepository.findById(notificationDTO.getUser())
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
         notification.setUser(user);
         return notification;
     }
