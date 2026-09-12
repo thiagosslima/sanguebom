@@ -11,10 +11,12 @@ import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import br.com.fiap.sanguebom.repository.*;
 import br.com.fiap.sanguebom.rulesMotor.ExamAnalysisService;
-import org.springframework.context.ApplicationEventPublisher;
+import br.com.fiap.sanguebom.service.notification.ExamNotificationService;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,7 +27,6 @@ public class ExamService {
     private final ExamRepository examRepository;
     private final AppUserRepository appUserRepository;
     private final HealthUnitRepository healthUnitRepository;
-    private final ApplicationEventPublisher publisher;
     private final UserServiceHelper userServiceHelper;
     private final ExamItemRepository examItemRepository;
     private final ExamResultRepository examResultRepository;
@@ -35,6 +36,8 @@ public class ExamService {
     private final RiskAssessmentService riskAssessmentService;
     private final ExamAnalysisService examAnalysisService;
     private final ExamAnalysisResultMapper examAnalysisResultMapper;
+    private final ExamNotificationService examNotificationService;
+    private final Clock clock;
 
     private final ExamMapper examMapper;
     private final ExamIResultMapper examIResultMapper;
@@ -42,7 +45,6 @@ public class ExamService {
     public ExamService(final ExamRepository examRepository,
                        final AppUserRepository appUserRepository,
                        final HealthUnitRepository healthUnitRepository,
-                       final ApplicationEventPublisher publisher,
                        final UserServiceHelper userServiceHelper,
                        final ExamItemRepository examItemRepository,
                        final ExamMapper examMapper,
@@ -52,12 +54,13 @@ public class ExamService {
                        final RiskAssessmentRepository riskAssessmentRepository,
                        final RiskAssessmentService riskAssessmentService,
                        final ExamAnalysisService examAnalysisService,
-                       ExamIResultMapper examIResultMapper,
-                       ExamAnalysisResultMapper examAnalysisResultMapper) {
+                       final ExamIResultMapper examIResultMapper,
+                       final ExamAnalysisResultMapper examAnalysisResultMapper,
+                       final ExamNotificationService examNotificationService,
+                       final Clock clock) {
         this.examRepository = examRepository;
         this.appUserRepository = appUserRepository;
         this.healthUnitRepository = healthUnitRepository;
-        this.publisher = publisher;
         this.userServiceHelper = userServiceHelper;
         this.examItemRepository = examItemRepository;
         this.examMapper = examMapper;
@@ -69,6 +72,8 @@ public class ExamService {
         this.riskAssessmentService = riskAssessmentService;
         this.examAnalysisService = examAnalysisService;
         this.examAnalysisResultMapper = examAnalysisResultMapper;
+        this.examNotificationService = examNotificationService;
+        this.clock = clock;
     }
 
     public List<ExamRecoverDTO> findAll() {
@@ -115,6 +120,7 @@ public class ExamService {
 
         RiskAssessment savedRA = riskAssessmentRepository.save(riskAssessment);
 
+        examNotificationService.notifyResultAvailable(exam);
 
         return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
 
@@ -185,7 +191,8 @@ public class ExamService {
 
         Exam exam = examMapper.toEntity(examDTO);
 
-        exam.setStatus(ExamStatus.COLLECTED);
+        exam.setStatus(ExamStatus.RELEASED);
+        exam.setReleasedAt(OffsetDateTime.now(clock));
         exam.setUser(context.user());
         exam.setHealthUnit(context.healthUnit());
 
@@ -239,10 +246,6 @@ public class ExamService {
         if(examResultsIds.size() != examResultList.size()){
             throw new IllegalArgumentException("Não pode haver itens de exame duplicados");
         }
-    }
-
-    private void checkIfAllExamItemsExist(List<ExamResultDTO> examResultList) {
-
     }
 
     public void update(final Long id, final ExamRecoverDTO examRecoverDTO) {
