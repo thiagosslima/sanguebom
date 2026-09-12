@@ -71,13 +71,30 @@ public class DoctorTimelineService {
 
         final OffsetDateTime fromAt = startOfDay(from);
         final OffsetDateTime toExclusive = startOfNextDay(to);
+        final PageRequest pageRequest = PageRequest.of(page, size);
 
-        final Page<MarkerTimelinePointDTO> points = examResultRepository
-                .findTimelineByUserAndItemCode(userId, itemCode, fromAt, toExclusive,
-                        PageRequest.of(page, size))
+        final Page<MarkerTimelinePointDTO> points = findTimelineResults(userId, itemCode,
+                        fromAt, toExclusive, pageRequest)
                 .map(result -> toTimelinePoint(result, user));
 
         return PageResponse.of(points);
+    }
+
+    private Page<ExamResult> findTimelineResults(final Long userId, final String itemCode,
+            final OffsetDateTime fromAt, final OffsetDateTime toExclusive, final PageRequest pageRequest) {
+        if (fromAt != null && toExclusive != null) {
+            return examResultRepository.findTimelineByUserAndItemCodeBetween(
+                    userId, itemCode, fromAt, toExclusive, pageRequest);
+        }
+        if (fromAt != null) {
+            return examResultRepository.findTimelineByUserAndItemCodeFrom(
+                    userId, itemCode, fromAt, pageRequest);
+        }
+        if (toExclusive != null) {
+            return examResultRepository.findTimelineByUserAndItemCodeUntil(
+                    userId, itemCode, toExclusive, pageRequest);
+        }
+        return examResultRepository.findTimelineByUserAndItemCode(userId, itemCode, pageRequest);
     }
 
     private MarkerTimelinePointDTO toTimelinePoint(final ExamResult result, final AppUser user) {

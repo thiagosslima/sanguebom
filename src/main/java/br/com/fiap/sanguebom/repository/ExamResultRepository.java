@@ -27,8 +27,6 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long> {
             WHERE e.user.id = :userId
             AND UPPER(item.code) = UPPER(:itemCode)
             AND e.collectedAt IS NOT NULL
-            AND (:fromAt IS NULL OR e.collectedAt >= :fromAt)
-            AND (:toExclusive IS NULL OR e.collectedAt < :toExclusive)
             ORDER BY e.collectedAt ASC, r.id ASC
             """,
             countQuery = """
@@ -38,10 +36,87 @@ public interface ExamResultRepository extends JpaRepository<ExamResult, Long> {
             WHERE e.user.id = :userId
             AND UPPER(item.code) = UPPER(:itemCode)
             AND e.collectedAt IS NOT NULL
-            AND (:fromAt IS NULL OR e.collectedAt >= :fromAt)
-            AND (:toExclusive IS NULL OR e.collectedAt < :toExclusive)
             """)
     Page<ExamResult> findTimelineByUserAndItemCode(
+            @Param("userId") Long userId,
+            @Param("itemCode") String itemCode,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {"exam", "examItem"})
+    @Query(value = """
+            SELECT r FROM ExamResult r
+            JOIN r.exam e
+            JOIN r.examItem item
+            WHERE e.user.id = :userId
+            AND UPPER(item.code) = UPPER(:itemCode)
+            AND e.collectedAt IS NOT NULL
+            AND e.collectedAt >= :fromAt
+            ORDER BY e.collectedAt ASC, r.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(r) FROM ExamResult r
+            JOIN r.exam e
+            JOIN r.examItem item
+            WHERE e.user.id = :userId
+            AND UPPER(item.code) = UPPER(:itemCode)
+            AND e.collectedAt IS NOT NULL
+            AND e.collectedAt >= :fromAt
+            """)
+    Page<ExamResult> findTimelineByUserAndItemCodeFrom(
+            @Param("userId") Long userId,
+            @Param("itemCode") String itemCode,
+            @Param("fromAt") OffsetDateTime fromAt,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {"exam", "examItem"})
+    @Query(value = """
+            SELECT r FROM ExamResult r
+            JOIN r.exam e
+            JOIN r.examItem item
+            WHERE e.user.id = :userId
+            AND UPPER(item.code) = UPPER(:itemCode)
+            AND e.collectedAt IS NOT NULL
+            AND e.collectedAt < :toExclusive
+            ORDER BY e.collectedAt ASC, r.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(r) FROM ExamResult r
+            JOIN r.exam e
+            JOIN r.examItem item
+            WHERE e.user.id = :userId
+            AND UPPER(item.code) = UPPER(:itemCode)
+            AND e.collectedAt IS NOT NULL
+            AND e.collectedAt < :toExclusive
+            """)
+    Page<ExamResult> findTimelineByUserAndItemCodeUntil(
+            @Param("userId") Long userId,
+            @Param("itemCode") String itemCode,
+            @Param("toExclusive") OffsetDateTime toExclusive,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {"exam", "examItem"})
+    @Query(value = """
+            SELECT r FROM ExamResult r
+            JOIN r.exam e
+            JOIN r.examItem item
+            WHERE e.user.id = :userId
+            AND UPPER(item.code) = UPPER(:itemCode)
+            AND e.collectedAt IS NOT NULL
+            AND e.collectedAt >= :fromAt
+            AND e.collectedAt < :toExclusive
+            ORDER BY e.collectedAt ASC, r.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(r) FROM ExamResult r
+            JOIN r.exam e
+            JOIN r.examItem item
+            WHERE e.user.id = :userId
+            AND UPPER(item.code) = UPPER(:itemCode)
+            AND e.collectedAt IS NOT NULL
+            AND e.collectedAt >= :fromAt
+            AND e.collectedAt < :toExclusive
+            """)
+    Page<ExamResult> findTimelineByUserAndItemCodeBetween(
             @Param("userId") Long userId,
             @Param("itemCode") String itemCode,
             @Param("fromAt") OffsetDateTime fromAt,

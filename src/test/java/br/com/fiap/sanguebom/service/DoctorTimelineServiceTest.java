@@ -94,7 +94,7 @@ class DoctorTimelineServiceTest {
 
         given(appUserRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(examItemRepository.findActiveByCode(ITEM_CODE)).willReturn(Optional.of(item));
-        given(examResultRepository.findTimelineByUserAndItemCode(eq(USER_ID), eq(ITEM_CODE),
+        given(examResultRepository.findTimelineByUserAndItemCodeBetween(eq(USER_ID), eq(ITEM_CODE),
                 any(), any(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of(result)));
         given(referenceRangeRepository.findApplicableRangeForTimeline(eq(item.getId()), eq(Sex.MALE),
@@ -124,13 +124,13 @@ class DoctorTimelineServiceTest {
         given(appUserRepository.findById(USER_ID)).willReturn(Optional.of(user()));
         given(examItemRepository.findActiveByCode(ITEM_CODE)).willReturn(Optional.of(item()));
         given(examResultRepository.findTimelineByUserAndItemCode(anyLong(), eq(ITEM_CODE),
-                any(), any(), any(Pageable.class)))
+                any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of()));
 
         service.timeline(USER_ID, ITEM_CODE, null, null, 2, 5);
 
         then(examResultRepository).should().findTimelineByUserAndItemCode(eq(USER_ID), eq(ITEM_CODE),
-                eq(null), eq(null), pageableCaptor.capture());
+                pageableCaptor.capture());
         assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(2);
         assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(5);
     }
