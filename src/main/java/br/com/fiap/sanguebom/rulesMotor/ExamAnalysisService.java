@@ -3,6 +3,7 @@ package br.com.fiap.sanguebom.rulesMotor;
 import br.com.fiap.sanguebom.exception.ExamAnalysisException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.model.entities.*;
+import br.com.fiap.sanguebom.model.enums.ApplicationMessage;
 import br.com.fiap.sanguebom.model.enums.Sex;
 import br.com.fiap.sanguebom.model.exam.ExamAnalysisScore;
 import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
@@ -74,7 +75,7 @@ public class ExamAnalysisService {
 
         if (user.getBirthDate() == null) {
             throw new ExamAnalysisException(
-                    messageService.getMessage("exam.analysis.missing-birth-date")
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_MISSING_BIRTH_DATE)
             );
         }
 
@@ -90,13 +91,13 @@ public class ExamAnalysisService {
 
         if (healthProfile == null) {
             throw new ExamAnalysisException(
-                    messageService.getMessage("exam.analysis.missing-health-profile")
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_MISSING_HEALTH_PROFILE)
             );
         }
 
         if (healthProfile.getSex() == null) {
             throw new ExamAnalysisException(
-                    messageService.getMessage("exam.analysis.missing-sex")
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_MISSING_SEX)
             );
         }
 
@@ -137,7 +138,7 @@ public class ExamAnalysisService {
                 .orElseThrow(() ->
                         new ExamAnalysisException(
                                 messageService.getMessage(
-                                        "exam.analysis.rule-not-found",
+                                        ApplicationMessage.EXAM_ANALYSIS_RULE_NOT_FOUND,
                                         examResult.getValueNumeric(),
                                         examResult.getExamItem().getId()
                                 )
@@ -152,7 +153,7 @@ public class ExamAnalysisService {
 
         if (evaluatedItems == 0) {
             throw new ExamAnalysisException(
-                    messageService.getMessage("exam.analysis.empty-items")
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_EMPTY_ITEMS)
             );
         }
 
