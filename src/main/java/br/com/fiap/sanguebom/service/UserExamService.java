@@ -4,13 +4,13 @@ import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.mapper.UserExamMapper;
 import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.entities.RiskAssessment;
+import br.com.fiap.sanguebom.model.enums.ApplicationMessage;
 import br.com.fiap.sanguebom.model.userexam.ExamDetailDTO;
 import br.com.fiap.sanguebom.model.userexam.ExamResultItemDTO;
 import br.com.fiap.sanguebom.model.userexam.ExamSummaryDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.ExamResultRepository;
-import org.springframework.context.MessageSource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -22,22 +22,21 @@ import java.util.Locale;
 @Service
 public class UserExamService {
 
-    private static final String DISCLAIMER_KEY = "exam.medical-disclaimer";
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "collectedAt");
 
     private final ExamRepository examRepository;
     private final ExamResultRepository examResultRepository;
     private final UserExamMapper userExamMapper;
-    private final MessageSource messageSource;
+    private final MessageService messageService;
 
     public UserExamService(final ExamRepository examRepository,
             final ExamResultRepository examResultRepository,
             final UserExamMapper userExamMapper,
-            final MessageSource messageSource) {
+            final MessageService messageService) {
         this.examRepository = examRepository;
         this.examResultRepository = examResultRepository;
         this.userExamMapper = userExamMapper;
-        this.messageSource = messageSource;
+        this.messageService = messageService;
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +63,7 @@ public class UserExamService {
                 risk == null ? null : risk.getScore(),
                 risk == null ? null : risk.getLevel(),
                 risk == null ? null : risk.getExplanation(),
-                messageSource.getMessage(DISCLAIMER_KEY, null, locale));
+                messageService.getMessage(ApplicationMessage.EXAM_MEDICAL_DISCLAIMER, locale));
     }
 
 }

@@ -1,11 +1,14 @@
 package br.com.fiap.sanguebom.rulesMotor;
 
+import br.com.fiap.sanguebom.exception.ExamAnalysisException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.model.entities.*;
+import br.com.fiap.sanguebom.model.enums.ApplicationMessage;
 import br.com.fiap.sanguebom.model.enums.Sex;
 import br.com.fiap.sanguebom.model.exam.ExamAnalysisScore;
 import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
 import br.com.fiap.sanguebom.repository.RuleRepository;
+import br.com.fiap.sanguebom.service.MessageService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,14 +23,17 @@ public class ExamAnalysisService {
     private final ReferenceRangeRepository referenceRangeRepository;
     private final RuleRepository ruleRepository;
     private final RiskAssessmentClassifier riskAssessmentClassifier;
+    private final MessageService messageService;
 
     public ExamAnalysisService(
             ReferenceRangeRepository referenceRangeRepository,
             RuleRepository ruleRepository,
-            RiskAssessmentClassifier riskAssessmentClassifier) {
+            RiskAssessmentClassifier riskAssessmentClassifier,
+            MessageService messageService) {
         this.referenceRangeRepository = referenceRangeRepository;
         this.ruleRepository = ruleRepository;
         this.riskAssessmentClassifier = riskAssessmentClassifier;
+        this.messageService = messageService;
     }
 
     public ExamAnalysisScore analyze(
@@ -36,12 +42,9 @@ public class ExamAnalysisService {
             AppUser user
     ) {
 
-        long userAge = ChronoUnit.YEARS.between(
-                user.getBirthDate(),
-                LocalDate.now()
-        );
+        long userAge = calculateUserAge(user);
 
-        Sex userSex = user.getHealthProfile().getSex();
+        Sex userSex = getUserSex(user);
 
         BigDecimal totalScore = BigDecimal.ZERO;
 
@@ -66,6 +69,39 @@ public class ExamAnalysisService {
         );
 
         return new ExamAnalysisScore(finalScore);
+    }
+
+    private long calculateUserAge(AppUser user) {
+
+        if (user.getBirthDate() == null) {
+            throw new ExamAnalysisException(
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_MISSING_BIRTH_DATE)
+            );
+        }
+
+        return ChronoUnit.YEARS.between(
+                user.getBirthDate(),
+                LocalDate.now()
+        );
+    }
+
+    private Sex getUserSex(AppUser user) {
+
+        HealthProfile healthProfile = user.getHealthProfile();
+
+        if (healthProfile == null) {
+            throw new ExamAnalysisException(
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_MISSING_HEALTH_PROFILE)
+            );
+        }
+
+        if (healthProfile.getSex() == null) {
+            throw new ExamAnalysisException(
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_MISSING_SEX)
+            );
+        }
+
+        return healthProfile.getSex();
     }
 
     private Rule findApplicableRule(
@@ -100,9 +136,9 @@ public class ExamAnalysisService {
                 )
                 .findFirst()
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                String.format(
-                                        "Nenhuma regra encontrada para o valor %s do item %d",
+                        new ExamAnalysisException(
+                                messageService.getMessage(
+                                        ApplicationMessage.EXAM_ANALYSIS_RULE_NOT_FOUND,
                                         examResult.getValueNumeric(),
                                         examResult.getExamItem().getId()
                                 )
@@ -116,8 +152,8 @@ public class ExamAnalysisService {
     ) {
 
         if (evaluatedItems == 0) {
-            throw new IllegalArgumentException(
-                    "Não é possível calcular o score sem itens avaliados"
+            throw new ExamAnalysisException(
+                    messageService.getMessage(ApplicationMessage.EXAM_ANALYSIS_EMPTY_ITEMS)
             );
         }
 
