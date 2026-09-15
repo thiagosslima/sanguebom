@@ -23,13 +23,16 @@ public class NotificationResource {
     }
 
     @GetMapping
-    public ResponseEntity<List<NotificationDTO>> getAllNotifications() {
-        return ResponseEntity.ok(notificationService.findAll());
+    public ResponseEntity<List<NotificationDTO>> getAllNotifications(
+            @RequestParam(required = false) final Long userId,
+            @RequestParam(required = false) final String status
+    ) {
+        return ResponseEntity.ok(notificationService.findAll(userId, status));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<NotificationDTO> getNotification(
-            @PathVariable(name = "id") final Long id) {
+            @PathVariable final Long id) {
         return ResponseEntity.ok(notificationService.get(id));
     }
 
