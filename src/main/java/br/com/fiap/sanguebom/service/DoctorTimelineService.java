@@ -16,6 +16,7 @@ import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamItemRepository;
 import br.com.fiap.sanguebom.repository.ExamResultRepository;
 import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
+import br.com.fiap.sanguebom.util.DateRangeUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -26,15 +27,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.Optional;
 
 @Service
 public class DoctorTimelineService {
-
-    private static final int NEXT_DAY_OFFSET = 1;
 
     private final AppUserRepository appUserRepository;
     private final ExamItemRepository examItemRepository;
@@ -69,8 +67,8 @@ public class DoctorTimelineService {
                         messageService.getMessage(ApplicationMessage.DOCTOR_TIMELINE_EXAM_ITEM_NOT_FOUND,
                                 itemCode)));
 
-        final OffsetDateTime fromAt = startOfDay(from);
-        final OffsetDateTime toExclusive = startOfNextDay(to);
+        final OffsetDateTime fromAt = DateRangeUtils.startOfDayUtc(from);
+        final OffsetDateTime toExclusive = DateRangeUtils.startOfNextDayUtc(to);
         final PageRequest pageRequest = PageRequest.of(page, size);
 
         final Page<MarkerTimelinePointDTO> points = findTimelineResults(userId, itemCode,
@@ -172,16 +170,8 @@ public class DoctorTimelineService {
         return BigDecimal.valueOf(ChronoUnit.YEARS.between(user.getBirthDate(), date));
     }
 
-    private static OffsetDateTime startOfDay(final LocalDate date) {
-        return date == null ? null : date.atStartOfDay().atOffset(ZoneOffset.UTC);
-    }
-
-    private static OffsetDateTime startOfNextDay(final LocalDate date) {
-        return date == null ? null : startOfDay(date.plusDays(NEXT_DAY_OFFSET));
-    }
-
     private void validatePeriod(final LocalDate from, final LocalDate to) {
-        if (from != null && to != null && from.isAfter(to)) {
+        if (DateRangeUtils.isInvalidPeriod(from, to)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     messageService.getMessage(ApplicationMessage.DOCTOR_TIMELINE_INVALID_PERIOD));
         }
