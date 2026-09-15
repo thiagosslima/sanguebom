@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,5 +46,30 @@ public interface ReferenceRangeRepository extends JpaRepository<ReferenceRange, 
     List<ReferenceRange> findCurrentRangesByExamItemId(
             @Param("examItemId") Long examItemId,
             @Param("currentDate") LocalDate currentDate
+    );
+
+    @EntityGraph(attributePaths = "referenceRangeRules")
+    @Query("""
+            SELECT rr FROM ReferenceRange rr
+            WHERE rr.examItem.id = :examItemId
+            AND (:sex IS NULL OR rr.sex IS NULL OR rr.sex = :sex)
+            AND (
+                (:age IS NULL AND rr.ageMinYears IS NULL AND rr.ageMaxYears IS NULL)
+                OR (:age IS NOT NULL
+                    AND (rr.ageMinYears IS NULL OR rr.ageMinYears <= :age)
+                    AND (rr.ageMaxYears IS NULL OR rr.ageMaxYears >= :age))
+            )
+            AND (rr.validFrom IS NULL OR rr.validFrom <= :collectedDate)
+            AND (rr.validUntil IS NULL OR rr.validUntil >= :collectedDate)
+            ORDER BY
+                CASE WHEN rr.sex = :sex THEN 0 ELSE 1 END,
+                rr.version DESC,
+                rr.id DESC
+            """)
+    List<ReferenceRange> findApplicableRangeForTimeline(
+            @Param("examItemId") Long examItemId,
+            @Param("sex") Sex sex,
+            @Param("age") BigDecimal age,
+            @Param("collectedDate") LocalDate collectedDate
     );
 }
