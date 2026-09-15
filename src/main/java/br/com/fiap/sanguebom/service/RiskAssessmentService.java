@@ -13,6 +13,7 @@ import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
 import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
+import br.com.fiap.sanguebom.util.DateRangeUtils;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -88,8 +89,8 @@ public class RiskAssessmentService {
         appUserRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Paciente não encontrado: {0}".formatted(userId)));
 
-        final OffsetDateTime fromAt = startOfDay(from);
-        final OffsetDateTime toExclusive = startOfNextDay(to);
+        final OffsetDateTime fromAt = DateRangeUtils.startOfDayUtc(from);
+        final OffsetDateTime toExclusive = DateRangeUtils.startOfNextDayUtc(to);
         final PageRequest pageRequest = PageRequest.of(page, size);
 
         final Page<RiskTimelinePointDTO> points =
@@ -164,18 +165,8 @@ public class RiskAssessmentService {
         return riskAssessment;
     }
 
-    private static OffsetDateTime startOfDay(final LocalDate date) {
-        // TODO: Colocar em uma classe útil para reuso em outros métodos
-        return date == null ? null : date.atStartOfDay().atOffset(ZoneOffset.UTC);
-    }
-
-    private static OffsetDateTime startOfNextDay(final LocalDate date) {
-        // TODO: Colocar em uma classe útil para reuso em outros métodos
-        return date == null ? null : startOfDay(date.plusDays(NEXT_DAY_OFFSET));
-    }
-
     private void validatePeriod(final LocalDate from, final LocalDate to) {
-        if (from != null && to != null && from.isAfter(to)) {
+        if (if (DateRangeUtils.isInvalidPeriod(from, to)) {
             // TODO: Colocar em uma classe útil para reuso em outros métodos
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O período inicial não pode ser maior que o período final.");
         }
