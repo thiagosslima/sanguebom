@@ -3,14 +3,15 @@ package br.com.fiap.sanguebom.service.notification;
 import br.com.fiap.sanguebom.config.NotificationProperties;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.model.entities.AppUser;
+import br.com.fiap.sanguebom.model.enums.ApplicationMessage;
 import br.com.fiap.sanguebom.model.enums.NotificationType;
 import br.com.fiap.sanguebom.model.notification.ExamGoalScanResultDTO;
 import br.com.fiap.sanguebom.model.userexam.ExamGoalDTO;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.service.ExamGoalService;
+import br.com.fiap.sanguebom.service.MessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,7 +20,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 @Service
 public class ExamGoalNotificationService {
@@ -27,10 +27,6 @@ public class ExamGoalNotificationService {
     private static final Logger LOG = LoggerFactory.getLogger(ExamGoalNotificationService.class);
 
     static final String ACTIVE_STATUS = "ACTIVE";
-    static final String DUE_SOON_TITLE_KEY = "notification.exam-goal.due-soon.title";
-    static final String DUE_SOON_MESSAGE_KEY = "notification.exam-goal.due-soon.message";
-    static final String OVERDUE_TITLE_KEY = "notification.exam-goal.overdue.title";
-    static final String OVERDUE_MESSAGE_KEY = "notification.exam-goal.overdue.message";
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final Sort BY_ID = Sort.by("id");
@@ -38,18 +34,18 @@ public class ExamGoalNotificationService {
     private final AppUserRepository appUserRepository;
     private final ExamGoalService examGoalService;
     private final NotificationDispatcher dispatcher;
-    private final MessageSource messageSource;
+    private final MessageService messageService;
     private final NotificationProperties properties;
 
     public ExamGoalNotificationService(final AppUserRepository appUserRepository,
             final ExamGoalService examGoalService,
             final NotificationDispatcher dispatcher,
-            final MessageSource messageSource,
+            final MessageService messageService,
             final NotificationProperties properties) {
         this.appUserRepository = appUserRepository;
         this.examGoalService = examGoalService;
         this.dispatcher = dispatcher;
-        this.messageSource = messageSource;
+        this.messageService = messageService;
         this.properties = properties;
     }
 
@@ -102,24 +98,22 @@ public class ExamGoalNotificationService {
     }
 
     private ScanOutcome dispatchDueSoon(final AppUser user, final ExamGoalDTO goal) {
-        final Locale locale = Locale.getDefault();
         final Object[] args = {goal.daysRemaining(), DATE.format(goal.dueDate())};
 
         return dispatcher.dispatch(user, NotificationType.EXAM_GOAL_DUE_SOON,
-                messageSource.getMessage(DUE_SOON_TITLE_KEY, null, locale),
-                messageSource.getMessage(DUE_SOON_MESSAGE_KEY, args, locale),
+                messageService.getMessage(ApplicationMessage.NOTIFICATION_EXAM_GOAL_DUE_SOON_TITLE),
+                messageService.getMessage(ApplicationMessage.NOTIFICATION_EXAM_GOAL_DUE_SOON_MESSAGE, args),
                 cycleKeyOf(goal.dueDate()))
                 .map(notification -> ScanOutcome.DUE_SOON_CREATED)
                 .orElse(ScanOutcome.NOTHING_TO_DO);
     }
 
     private ScanOutcome dispatchOverdue(final AppUser user, final ExamGoalDTO goal) {
-        final Locale locale = Locale.getDefault();
         final Object[] args = {DATE.format(goal.dueDate())};
 
         return dispatcher.dispatch(user, NotificationType.EXAM_GOAL_OVERDUE,
-                messageSource.getMessage(OVERDUE_TITLE_KEY, null, locale),
-                messageSource.getMessage(OVERDUE_MESSAGE_KEY, args, locale),
+                messageService.getMessage(ApplicationMessage.NOTIFICATION_EXAM_GOAL_OVERDUE_TITLE),
+                messageService.getMessage(ApplicationMessage.NOTIFICATION_EXAM_GOAL_OVERDUE_MESSAGE, args),
                 cycleKeyOf(goal.dueDate()))
                 .map(notification -> ScanOutcome.OVERDUE_CREATED)
                 .orElse(ScanOutcome.NOTHING_TO_DO);

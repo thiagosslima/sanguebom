@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
+import br.com.fiap.sanguebom.service.MessageService;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
 import java.time.OffsetDateTime;
@@ -40,7 +40,7 @@ class ExamNotificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ExamNotificationService(dispatcher, realMessageSource());
+        service = new ExamNotificationService(dispatcher, new MessageService(realMessageSource()));
     }
 
     @Test
@@ -75,7 +75,7 @@ class ExamNotificationServiceTest {
         return exam;
     }
 
-    private static MessageSource realMessageSource() {
+    private static ResourceBundleMessageSource realMessageSource() {
         final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
         messageSource.setBasename("messages");
         messageSource.setDefaultEncoding("UTF-8");

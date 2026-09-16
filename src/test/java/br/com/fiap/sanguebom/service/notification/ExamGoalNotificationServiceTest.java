@@ -20,7 +20,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
+import br.com.fiap.sanguebom.service.MessageService;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -67,7 +67,7 @@ class ExamGoalNotificationServiceTest {
                 new NotificationProperties.Sse(60_000L, 25_000L),
                 new NotificationProperties.ExamGoal(PAGE_SIZE));
         service = new ExamGoalNotificationService(appUserRepository, examGoalService, dispatcher,
-                realMessageSource(), properties);
+                new MessageService(realMessageSource()), properties);
     }
 
     @Test
@@ -210,7 +210,7 @@ class ExamGoalNotificationServiceTest {
         return user;
     }
 
-    private static MessageSource realMessageSource() {
+    private static ResourceBundleMessageSource realMessageSource() {
         final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
         messageSource.setBasename("messages");
         messageSource.setDefaultEncoding("UTF-8");
