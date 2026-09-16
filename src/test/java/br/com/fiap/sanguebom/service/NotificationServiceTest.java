@@ -5,6 +5,8 @@ import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.model.dtos.NotificationDTO;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Notification;
+import br.com.fiap.sanguebom.model.enums.NotificationStatus;
+import br.com.fiap.sanguebom.model.enums.NotificationType;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +61,7 @@ class NotificationServiceTest {
     @DisplayName("sem filtros, findAll devolve todas as notificacoes")
     void shouldReturnAllNotificationsWithoutFilters() {
         given(notificationRepository.findAll(any(Sort.class)))
-                .willReturn(List.of(notification(USER_ID, "SENT"), notification(OTHER_USER_ID, "PENDING")));
+                .willReturn(List.of(notification(USER_ID, NotificationStatus.SENT), notification(OTHER_USER_ID, NotificationStatus.PENDING)));
 
         final List<NotificationDTO> result = service.findAll(null, null);
 
@@ -70,7 +72,7 @@ class NotificationServiceTest {
     @DisplayName("filtro por userId devolve apenas as notificacoes do titular")
     void shouldFilterByUserId() {
         given(notificationRepository.findAll(any(Sort.class)))
-                .willReturn(List.of(notification(USER_ID, "SENT"), notification(OTHER_USER_ID, "SENT")));
+                .willReturn(List.of(notification(USER_ID, NotificationStatus.SENT), notification(OTHER_USER_ID, NotificationStatus.SENT)));
 
         final List<NotificationDTO> result = service.findAll(USER_ID, null);
 
@@ -82,12 +84,12 @@ class NotificationServiceTest {
     @DisplayName("filtro por status devolve apenas as notificacoes com aquele status")
     void shouldFilterByStatus() {
         given(notificationRepository.findAll(any(Sort.class)))
-                .willReturn(List.of(notification(USER_ID, "SENT"), notification(USER_ID, "PENDING")));
+                .willReturn(List.of(notification(USER_ID, NotificationStatus.SENT), notification(USER_ID, NotificationStatus.PENDING)));
 
-        final List<NotificationDTO> result = service.findAll(null, "PENDING");
+        final List<NotificationDTO> result = service.findAll(null, NotificationStatus.PENDING);
 
         assertThat(result).singleElement()
-                .extracting(NotificationDTO::getStatus).isEqualTo("PENDING");
+                .extracting(NotificationDTO::getStatus).isEqualTo(NotificationStatus.PENDING);
     }
 
     @Test
@@ -95,15 +97,15 @@ class NotificationServiceTest {
     void shouldFilterByUserIdAndStatus() {
         given(notificationRepository.findAll(any(Sort.class)))
                 .willReturn(List.of(
-                        notification(USER_ID, "SENT"),
-                        notification(USER_ID, "PENDING"),
-                        notification(OTHER_USER_ID, "PENDING")));
+                        notification(USER_ID, NotificationStatus.SENT),
+                        notification(USER_ID, NotificationStatus.PENDING),
+                        notification(OTHER_USER_ID, NotificationStatus.PENDING)));
 
-        final List<NotificationDTO> result = service.findAll(USER_ID, "PENDING");
+        final List<NotificationDTO> result = service.findAll(USER_ID, NotificationStatus.PENDING);
 
         assertThat(result).singleElement().satisfies(dto -> {
             assertThat(dto.getUser()).isEqualTo(USER_ID);
-            assertThat(dto.getStatus()).isEqualTo("PENDING");
+            assertThat(dto.getStatus()).isEqualTo(NotificationStatus.PENDING);
         });
     }
 
@@ -111,7 +113,7 @@ class NotificationServiceTest {
     @DisplayName("filtro sem nenhuma notificacao correspondente devolve lista vazia, e nao erro")
     void shouldReturnEmptyListWhenNoMatch() {
         given(notificationRepository.findAll(any(Sort.class)))
-                .willReturn(List.of(notification(OTHER_USER_ID, "SENT")));
+                .willReturn(List.of(notification(OTHER_USER_ID, NotificationStatus.SENT)));
 
         final List<NotificationDTO> result = service.findAll(USER_ID, null);
 
@@ -121,7 +123,7 @@ class NotificationServiceTest {
     @Test
     @DisplayName("notificacao sem usuario associado e ignorada ao filtrar por userId, sem lancar excecao")
     void shouldIgnoreNotificationWithoutUserWhenFilteringByUserId() {
-        final Notification withoutUser = notification(null, "SENT");
+        final Notification withoutUser = notification(null, NotificationStatus.SENT);
         withoutUser.setUser(null);
         given(notificationRepository.findAll(any(Sort.class))).willReturn(List.of(withoutUser));
 
@@ -136,12 +138,12 @@ class NotificationServiceTest {
     @DisplayName("get devolve a notificacao quando o id existe")
     void shouldReturnNotificationById() {
         given(notificationRepository.findById(NOTIFICATION_ID))
-                .willReturn(Optional.of(notification(USER_ID, "SENT")));
+                .willReturn(Optional.of(notification(USER_ID, NotificationStatus.SENT)));
 
         final NotificationDTO dto = service.get(NOTIFICATION_ID);
 
         assertThat(dto.getUser()).isEqualTo(USER_ID);
-        assertThat(dto.getStatus()).isEqualTo("SENT");
+        assertThat(dto.getStatus()).isEqualTo(NotificationStatus.SENT);
     }
 
     @Test
@@ -165,7 +167,7 @@ class NotificationServiceTest {
             return saved;
         });
 
-        final Long id = service.create(notificationDTO(USER_ID, "PENDING"));
+        final Long id = service.create(notificationDTO(USER_ID, NotificationStatus.PENDING));
 
         assertThat(id).isEqualTo(NOTIFICATION_ID);
         then(notificationRepository).should().save(any(Notification.class));
@@ -176,7 +178,7 @@ class NotificationServiceTest {
     void shouldNotMaskNotFoundExceptionOnCreate() {
         given(appUserRepository.findById(OTHER_USER_ID)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(notificationDTO(OTHER_USER_ID, "PENDING")))
+        assertThatThrownBy(() -> service.create(notificationDTO(OTHER_USER_ID, NotificationStatus.PENDING)))
                 .isInstanceOf(NotFoundException.class);
 
         then(notificationRepository).should(org.mockito.Mockito.never()).save(any());
@@ -189,7 +191,7 @@ class NotificationServiceTest {
         willThrow(new DataIntegrityViolationException("value too long for column"))
                 .given(notificationRepository).save(any(Notification.class));
 
-        assertThatThrownBy(() -> service.create(notificationDTO(USER_ID, "PENDING")))
+        assertThatThrownBy(() -> service.create(notificationDTO(USER_ID, NotificationStatus.PENDING)))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Error ao criar a notificação");
     }
@@ -199,13 +201,13 @@ class NotificationServiceTest {
     @Test
     @DisplayName("update mapeia o DTO na notificacao existente e salva")
     void shouldUpdateNotification() {
-        final Notification existing = notification(USER_ID, "PENDING");
+        final Notification existing = notification(USER_ID, NotificationStatus.PENDING);
         given(notificationRepository.findById(NOTIFICATION_ID)).willReturn(Optional.of(existing));
         given(appUserRepository.findById(USER_ID)).willReturn(Optional.of(appUser(USER_ID)));
 
-        service.update(NOTIFICATION_ID, notificationDTO(USER_ID, "SENT"));
+        service.update(NOTIFICATION_ID, notificationDTO(USER_ID, NotificationStatus.SENT));
 
-        assertThat(existing.getStatus()).isEqualTo("SENT");
+        assertThat(existing.getStatus()).isEqualTo(NotificationStatus.SENT);
         then(notificationRepository).should().save(existing);
     }
 
@@ -214,7 +216,7 @@ class NotificationServiceTest {
     void shouldFailUpdateWhenNotificationDoesNotExist() {
         given(notificationRepository.findById(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update(999L, notificationDTO(USER_ID, "SENT")))
+        assertThatThrownBy(() -> service.update(999L, notificationDTO(USER_ID, NotificationStatus.SENT)))
                 .isInstanceOf(NotFoundException.class);
 
         then(appUserRepository).shouldHaveNoInteractions();
@@ -224,10 +226,10 @@ class NotificationServiceTest {
     @DisplayName("update com usuario inexistente lanca NotFoundException, e nao BadRequestException")
     void shouldNotMaskNotFoundExceptionOnUpdate() {
         given(notificationRepository.findById(NOTIFICATION_ID))
-                .willReturn(Optional.of(notification(USER_ID, "PENDING")));
+                .willReturn(Optional.of(notification(USER_ID, NotificationStatus.PENDING)));
         given(appUserRepository.findById(OTHER_USER_ID)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update(NOTIFICATION_ID, notificationDTO(OTHER_USER_ID, "SENT")))
+        assertThatThrownBy(() -> service.update(NOTIFICATION_ID, notificationDTO(OTHER_USER_ID, NotificationStatus.SENT)))
                 .isInstanceOf(NotFoundException.class);
 
         then(notificationRepository).should(org.mockito.Mockito.never()).save(any());
@@ -237,12 +239,12 @@ class NotificationServiceTest {
     @DisplayName("falha de persistencia no update vira BadRequestException")
     void shouldWrapDataAccessExceptionOnUpdate() {
         given(notificationRepository.findById(NOTIFICATION_ID))
-                .willReturn(Optional.of(notification(USER_ID, "PENDING")));
+                .willReturn(Optional.of(notification(USER_ID, NotificationStatus.PENDING)));
         given(appUserRepository.findById(USER_ID)).willReturn(Optional.of(appUser(USER_ID)));
         willThrow(new DataIntegrityViolationException("value too long for column"))
                 .given(notificationRepository).save(any(Notification.class));
 
-        assertThatThrownBy(() -> service.update(NOTIFICATION_ID, notificationDTO(USER_ID, "SENT")))
+        assertThatThrownBy(() -> service.update(NOTIFICATION_ID, notificationDTO(USER_ID, NotificationStatus.SENT)))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Error ao atualizar a notificação");
     }
@@ -252,7 +254,7 @@ class NotificationServiceTest {
     @Test
     @DisplayName("delete remove a notificacao existente")
     void shouldDeleteNotification() {
-        final Notification existing = notification(USER_ID, "SENT");
+        final Notification existing = notification(USER_ID, NotificationStatus.SENT);
         given(notificationRepository.findById(NOTIFICATION_ID)).willReturn(Optional.of(existing));
 
         service.delete(NOTIFICATION_ID);
@@ -272,10 +274,10 @@ class NotificationServiceTest {
 
     // ---------------------------------------------------------------- fixtures
 
-    private static Notification notification(final Long userId, final String status) {
+    private static Notification notification(final Long userId, final NotificationStatus status) {
         final Notification notification = new Notification();
         notification.setId(NOTIFICATION_ID);
-        notification.setType("REMINDER");
+        notification.setType(NotificationType.REMINDER);
         notification.setTitle("Titulo");
         notification.setMessage("Mensagem");
         notification.setStatus(status);
@@ -284,9 +286,9 @@ class NotificationServiceTest {
         return notification;
     }
 
-    private static NotificationDTO notificationDTO(final Long userId, final String status) {
+    private static NotificationDTO notificationDTO(final Long userId, final NotificationStatus status) {
         final NotificationDTO dto = new NotificationDTO();
-        dto.setType("REMINDER");
+        dto.setType(NotificationType.REMINDER);
         dto.setTitle("Titulo");
         dto.setMessage("Mensagem");
         dto.setStatus(status);

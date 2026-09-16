@@ -4,6 +4,7 @@ import br.com.fiap.sanguebom.exception.BadRequestException;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Notification;
 import br.com.fiap.sanguebom.model.dtos.NotificationDTO;
+import br.com.fiap.sanguebom.model.enums.NotificationStatus;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.NotificationRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
@@ -22,14 +23,13 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final AppUserRepository appUserRepository;
 
-    public List<NotificationDTO> findAll(final Long appUserId, final String status) {
+    public List<NotificationDTO> findAll(final Long appUserId, final NotificationStatus status) {
         final List<Notification> notifications = notificationRepository.findAll(Sort.by("id"));
 
         return notifications.stream()
                 .filter(notification -> appUserId == null
                         || (notification.getUser() != null && notification.getUser().getId().equals(appUserId)))
-                .filter(notification -> status == null
-                        || (notification.getStatus() != null && notification.getStatus().equals(status)))
+                .filter(notification -> status == null || notification.getStatus() == status)
                 .map(notification -> mapToDTO(notification, new NotificationDTO()))
                 .toList();
     }

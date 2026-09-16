@@ -3,6 +3,7 @@ package br.com.fiap.sanguebom.service;
 import br.com.fiap.sanguebom.mapper.ExamAnalysisResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamMapper;
+import br.com.fiap.sanguebom.exception.DuplicatedExamResultException;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.entities.ExamItem;
@@ -126,7 +127,7 @@ class ExamServiceCreateNotificationTest {
 
         try {
             service.create(invalid);
-        } catch (final IllegalArgumentException expected) {
+        } catch (final DuplicatedExamResultException expected) {
             // esperado: itens de exame duplicados
         }
 
