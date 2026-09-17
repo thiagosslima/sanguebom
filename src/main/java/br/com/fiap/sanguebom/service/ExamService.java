@@ -138,13 +138,14 @@ public class ExamService {
     }
 
     private void finishExamAnalysis(Exam exam) {
-        exam.setReleasedAt(OffsetDateTime.now());
         exam.setStatus(ExamStatus.RELEASED);
+        exam.setReleasedAt(OffsetDateTime.now(clock));
         examRepository.save(exam);
     }
 
     private void examInAnalysis(Exam exam) {
-        examRepository.updateExamStatusById(exam.getId(), ExamStatus.IN_ANALYSIS);
+        exam.setStatus(ExamStatus.IN_ANALYSIS);
+        examRepository.save(exam);
     }
 
     private void validateExamResults(List<ExamResultDTO> examResults) {
@@ -212,8 +213,7 @@ public class ExamService {
 
         Exam exam = examMapper.toEntity(examDTO);
 
-        exam.setStatus(ExamStatus.RELEASED);
-        exam.setReleasedAt(OffsetDateTime.now(clock));
+        exam.setStatus(ExamStatus.COLLECTED);
         exam.setUser(context.user());
         exam.setHealthUnit(context.healthUnit());
 
