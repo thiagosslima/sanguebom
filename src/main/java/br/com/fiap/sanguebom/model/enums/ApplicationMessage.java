@@ -18,7 +18,13 @@ public enum ApplicationMessage {
     RISK_ASSESSMENT_LOW_EXPLANATION("risk-assessment.level.low.explanation"),
     RISK_ASSESSMENT_MODERATE_EXPLANATION("risk-assessment.level.moderate.explanation"),
     RISK_ASSESSMENT_HIGH_EXPLANATION("risk-assessment.level.high.explanation"),
-    RISK_ASSESSMENT_VERY_HIGH_EXPLANATION("risk-assessment.level.very-high.explanation");
+    RISK_ASSESSMENT_VERY_HIGH_EXPLANATION("risk-assessment.level.very-high.explanation"),
+    NOTIFICATION_EXAM_RESULT_AVAILABLE_TITLE("notification.exam-result-available.title"),
+    NOTIFICATION_EXAM_RESULT_AVAILABLE_MESSAGE("notification.exam-result-available.message"),
+    NOTIFICATION_EXAM_GOAL_DUE_SOON_TITLE("notification.exam-goal.due-soon.title"),
+    NOTIFICATION_EXAM_GOAL_DUE_SOON_MESSAGE("notification.exam-goal.due-soon.message"),
+    NOTIFICATION_EXAM_GOAL_OVERDUE_TITLE("notification.exam-goal.overdue.title"),
+    NOTIFICATION_EXAM_GOAL_OVERDUE_MESSAGE("notification.exam-goal.overdue.message");
 
     private final String code;
 

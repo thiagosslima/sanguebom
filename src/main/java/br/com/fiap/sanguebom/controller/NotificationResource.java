@@ -1,6 +1,7 @@
 package br.com.fiap.sanguebom.controller;
 
 import br.com.fiap.sanguebom.model.dtos.NotificationDTO;
+import br.com.fiap.sanguebom.model.enums.NotificationStatus;
 import br.com.fiap.sanguebom.service.NotificationService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
@@ -25,7 +26,7 @@ public class NotificationResource {
     @GetMapping
     public ResponseEntity<List<NotificationDTO>> getAllNotifications(
             @RequestParam(required = false) final Long userId,
-            @RequestParam(required = false) final String status
+            @RequestParam(required = false) final NotificationStatus status
     ) {
         return ResponseEntity.ok(notificationService.findAll(userId, status));
     }

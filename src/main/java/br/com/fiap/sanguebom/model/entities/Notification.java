@@ -1,5 +1,7 @@
 package br.com.fiap.sanguebom.model.entities;
 
+import br.com.fiap.sanguebom.model.enums.NotificationStatus;
+import br.com.fiap.sanguebom.model.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -31,7 +33,8 @@ public class Notification {
     private Long id;
 
     @Column(length = 30)
-    private String type;
+    @Enumerated(EnumType.STRING)
+    private NotificationType type;
 
     @Column(length = 200)
     private String title;
@@ -46,7 +49,11 @@ public class Notification {
     private OffsetDateTime sentAt;
 
     @Column(length = 30)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private NotificationStatus status;
+
+    @Column(length = 120)
+    private String referenceKey;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

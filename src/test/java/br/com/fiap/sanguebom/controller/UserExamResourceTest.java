@@ -17,6 +17,7 @@ import br.com.fiap.sanguebom.repository.ExamResultRepository;
 import br.com.fiap.sanguebom.repository.HealthProfileRepository;
 import br.com.fiap.sanguebom.service.ExamGoalService;
 import br.com.fiap.sanguebom.service.HealthProfileService;
+import br.com.fiap.sanguebom.service.MessageService;
 import br.com.fiap.sanguebom.service.UserExamService;
 import br.com.fiap.sanguebom.service.UserServiceHelper;
 import io.github.wimdeblauwe.errorhandlingspringbootstarter.servlet.ServletErrorHandlingConfiguration;
@@ -97,6 +98,12 @@ class UserExamResourceTest {
             messageSource.setBasename("messages");
             messageSource.setDefaultEncoding("UTF-8");
             return messageSource;
+        }
+
+        /** O UserExamService passou a resolver as mensagens pelo MessageService (commit 2bc0fc4). */
+        @Bean
+        MessageService messageService(final MessageSource messageSource) {
+            return new MessageService(messageSource);
         }
     }
 
