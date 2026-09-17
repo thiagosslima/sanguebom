@@ -1,9 +1,10 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.entities.RiskAssessment;
-import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
 import br.com.fiap.sanguebom.model.exam.ExamAnalysisScore;
 import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
 import br.com.fiap.sanguebom.model.riskAssessment.RiskTimelinePointDTO;
@@ -11,7 +12,6 @@ import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
-import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
