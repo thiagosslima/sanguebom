@@ -6,15 +6,27 @@ import br.com.fiap.sanguebom.model.entities.RiskAssessment;
 import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
 import br.com.fiap.sanguebom.model.exam.ExamAnalysisScore;
 import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
+import br.com.fiap.sanguebom.model.riskAssessment.RiskTimelinePointDTO;
+import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -22,6 +34,8 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class RiskAssessmentService {
+
+    private static final int NEXT_DAY_OFFSET = 1;
 
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final AppUserRepository appUserRepository;
@@ -67,6 +81,53 @@ public class RiskAssessmentService {
                 .orElseThrow(NotFoundException::new);
     }
 
+    public PageResponse<RiskTimelinePointDTO> findByUserId(final Long userId, final LocalDate from, final LocalDate to, final int page, final int size) {
+        validatePeriod(from, to);
+
+        // TODO: Implementar ApplicationMessages depois do merge da PR #12
+        appUserRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Paciente não encontrado: {0}".formatted(userId)));
+
+        final OffsetDateTime fromAt = startOfDay(from);
+        final OffsetDateTime toExclusive = startOfNextDay(to);
+        final PageRequest pageRequest = PageRequest.of(page, size);
+
+        final Page<RiskTimelinePointDTO> points =
+                findTimelineResults(userId, fromAt, toExclusive, pageRequest)
+                        .map(this::toTimelinePoint);
+
+        return PageResponse.of(points);
+    }
+
+    private Page<RiskAssessment> findTimelineResults(final Long userId, final OffsetDateTime fromAt,
+                                                     final OffsetDateTime toExclusive, final PageRequest pageRequest) {
+        Specification<RiskAssessment> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("user").get("id"), userId));
+
+            if (fromAt != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), fromAt));
+            }
+            if (toExclusive != null) {
+                predicates.add(cb.lessThan(root.get("createdAt"), toExclusive));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return riskAssessmentRepository.findAll(spec, pageRequest);
+    }
+
+    private RiskTimelinePointDTO toTimelinePoint(final RiskAssessment result) {
+        return new RiskTimelinePointDTO(
+                result.getId(),
+                result.getExam().getId(),
+                result.getScore(),
+                result.getLevel(),
+                result.getCreatedAt()
+        );
+    }
+
     public void update(final Long id, final RiskAssessmentDTO riskAssessmentDTO) {
         final RiskAssessment riskAssessment = riskAssessmentRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
@@ -101,5 +162,22 @@ public class RiskAssessmentService {
                 .orElseThrow(() -> new NotFoundException("exam not found"));
         riskAssessment.setExam(exam);
         return riskAssessment;
+    }
+
+    private static OffsetDateTime startOfDay(final LocalDate date) {
+        // TODO: Colocar em uma classe útil para reuso em outros métodos
+        return date == null ? null : date.atStartOfDay().atOffset(ZoneOffset.UTC);
+    }
+
+    private static OffsetDateTime startOfNextDay(final LocalDate date) {
+        // TODO: Colocar em uma classe útil para reuso em outros métodos
+        return date == null ? null : startOfDay(date.plusDays(NEXT_DAY_OFFSET));
+    }
+
+    private void validatePeriod(final LocalDate from, final LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) {
+            // TODO: Colocar em uma classe útil para reuso em outros métodos
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O período inicial não pode ser maior que o período final.");
+        }
     }
 }
