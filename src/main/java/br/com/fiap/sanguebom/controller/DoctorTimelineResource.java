@@ -1,7 +1,9 @@
 package br.com.fiap.sanguebom.controller;
 
+import br.com.fiap.sanguebom.model.doctor.ExamComparisonDTO;
 import br.com.fiap.sanguebom.model.doctor.MarkerTimelinePointDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
+import br.com.fiap.sanguebom.service.DoctorExamComparisonService;
 import br.com.fiap.sanguebom.service.DoctorTimelineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @Validated
@@ -27,9 +30,12 @@ import java.time.LocalDate;
 public class DoctorTimelineResource {
 
     private final DoctorTimelineService doctorTimelineService;
+    private final DoctorExamComparisonService doctorExamComparisonService;
 
-    public DoctorTimelineResource(final DoctorTimelineService doctorTimelineService) {
+    public DoctorTimelineResource(final DoctorTimelineService doctorTimelineService,
+            final DoctorExamComparisonService doctorExamComparisonService) {
         this.doctorTimelineService = doctorTimelineService;
+        this.doctorExamComparisonService = doctorExamComparisonService;
     }
 
     @GetMapping("/timeline")
@@ -46,5 +52,15 @@ public class DoctorTimelineResource {
             @RequestParam(name = "page", defaultValue = "0") @Min(0) final int page,
             @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) final int size) {
         return ResponseEntity.ok(doctorTimelineService.timeline(userId, itemCode, from, to, page, size));
+    }
+
+    @GetMapping("/exams/compare")
+    @Operation(summary = "Comparação lado a lado de exames",
+            description = "Retorna os itens medidos em dois ou mais exames do paciente, "
+                    + "com valores lado a lado e variações absoluta e percentual entre exames consecutivos.")
+    public ResponseEntity<ExamComparisonDTO> compareExams(
+            @PathVariable(name = "userId") final Long userId,
+            @RequestParam(name = "examIds") final List<Long> examIds) {
+        return ResponseEntity.ok(doctorExamComparisonService.compare(userId, examIds));
     }
 }
