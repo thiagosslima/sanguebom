@@ -61,7 +61,7 @@ class ExamGoalServiceTest {
     @Test
     @DisplayName("exame recente e periodicidade anual: meta em dia com a data do ultimo exame e o vencimento")
     void shouldReturnUpToDate() {
-        givenProfile("YEARLY");
+        givenProfile(ExamPeriodicity.YEARLY);
         givenLastExamCollectedAt(TODAY.minusMonths(2));
 
         final ExamGoalDTO goal = service.goalOf(USER_ID);
@@ -84,7 +84,7 @@ class ExamGoalServiceTest {
             "-90, OVERDUE"
     })
     void shouldClassifyGoalWindowBoundaries(final long daysRemaining, final ExamGoalStatus expected) {
-        givenProfile("YEARLY");
+        givenProfile(ExamPeriodicity.YEARLY);
         // vencimento = coleta + 12 meses, entao a coleta e retrocedida para cair no dia desejado
         givenLastExamCollectedAt(TODAY.plusDays(daysRemaining).minusMonths(12));
 
@@ -97,7 +97,7 @@ class ExamGoalServiceTest {
     @Test
     @DisplayName("cidadao sem nenhum exame: situacao NO_HISTORY e datas nulas")
     void shouldReturnNoHistoryWhenCitizenHasNoExam() {
-        givenProfile("YEARLY");
+        givenProfile(ExamPeriodicity.YEARLY);
         given(examRepository.findFirstByUserIdOrderByCollectedAtDesc(USER_ID)).willReturn(Optional.empty());
 
         final ExamGoalDTO goal = service.goalOf(USER_ID);
@@ -112,7 +112,7 @@ class ExamGoalServiceTest {
     @ParameterizedTest(name = "periodicidade {0} soma {1} meses")
     @DisplayName("o vencimento usa a periodicidade configurada no perfil de saude")
     @CsvSource({"QUARTERLY, 3", "SEMESTERLY, 6", "YEARLY, 12"})
-    void shouldAddConfiguredPeriodicityToLastExam(final String periodicity, final int months) {
+    void shouldAddConfiguredPeriodicityToLastExam(final ExamPeriodicity periodicity, final int months) {
         givenProfile(periodicity);
         final LocalDate collectedAt = LocalDate.of(2026, 8, 15);
         givenLastExamCollectedAt(collectedAt);
@@ -120,15 +120,13 @@ class ExamGoalServiceTest {
         final ExamGoalDTO goal = service.goalOf(USER_ID);
 
         assertThat(goal.dueDate()).isEqualTo(collectedAt.plusMonths(months));
-        assertThat(goal.periodicity()).isEqualTo(ExamPeriodicity.valueOf(periodicity));
+        assertThat(goal.periodicity()).isEqualTo(periodicity);
     }
 
-    @ParameterizedTest(name = "periodicidade \"{0}\" no banco cai no padrao YEARLY")
-    @DisplayName("periodicidade ausente ou desconhecida usa o padrao do DDL")
-    @NullSource
-    @ValueSource(strings = {"", "MENSAL", "   "})
-    void shouldFallBackToYearlyOnUnknownPeriodicity(final String stored) {
-        givenProfile(stored);
+    @Test
+    @DisplayName("periodicidade ausente no perfil usa o padrao do DDL")
+    void shouldFallBackToYearlyWhenPeriodicityIsMissing() {
+        givenProfile(null);
         final LocalDate collectedAt = LocalDate.of(2026, 8, 15);
         givenLastExamCollectedAt(collectedAt);
 
@@ -136,15 +134,6 @@ class ExamGoalServiceTest {
 
         assertThat(goal.periodicity()).isEqualTo(ExamPeriodicity.YEARLY);
         assertThat(goal.dueDate()).isEqualTo(collectedAt.plusMonths(12));
-    }
-
-    @Test
-    @DisplayName("periodicidade gravada em caixa diferente e reconhecida")
-    void shouldParsePeriodicityIgnoringCase() {
-        givenProfile("semesterly");
-        givenLastExamCollectedAt(LocalDate.of(2026, 8, 15));
-
-        assertThat(service.goalOf(USER_ID).periodicity()).isEqualTo(ExamPeriodicity.SEMESTERLY);
     }
 
     @Test
@@ -172,7 +161,7 @@ class ExamGoalServiceTest {
         then(examRepository).shouldHaveNoInteractions();
     }
 
-    private void givenProfile(final String periodicity) {
+    private void givenProfile(final ExamPeriodicity periodicity) {
         final HealthProfile profile = new HealthProfile();
         profile.setExamPeriodicity(periodicity);
         given(healthProfileService.getByUserId(USER_ID)).willReturn(profile);

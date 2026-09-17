@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.ExamPeriodicity;
 import br.com.fiap.sanguebom.model.enums.Sex;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,7 +20,6 @@ public class HealthProfileDTO {
 
     private Long id;
 
-    @Size(max = 20)
     private Sex sex;
 
     @Digits(integer = 5, fraction = 2)
@@ -35,8 +35,7 @@ public class HealthProfileDTO {
     private String riskFactors;
 
     @NotNull
-    @Size(max = 20)
-    private String examPeriodicity;
+    private ExamPeriodicity examPeriodicity;
 
     private OffsetDateTime createdAt;
 

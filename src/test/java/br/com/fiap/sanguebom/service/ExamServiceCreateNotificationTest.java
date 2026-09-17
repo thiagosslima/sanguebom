@@ -22,7 +22,8 @@ import br.com.fiap.sanguebom.repository.HealthUnitRepository;
 import br.com.fiap.sanguebom.repository.ReferenceRangeRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
 import br.com.fiap.sanguebom.repository.RuleRepository;
-import br.com.fiap.sanguebom.rulesMotor.ExamAnalysisService;
+import br.com.fiap.sanguebom.rulesMotor.achievement.AchievementEvaluator;
+import br.com.fiap.sanguebom.rulesMotor.exam.ExamAnalysisService;
 import br.com.fiap.sanguebom.service.notification.ExamNotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.atLeastOnce;
 
 /**
  * CF-348 - o exame nasce liberado e o cidadao e avisado do resultado disponivel.
@@ -77,17 +80,19 @@ class ExamServiceCreateNotificationTest {
     @Mock private ExamIResultMapper examIResultMapper;
     @Mock private ExamAnalysisResultMapper examAnalysisResultMapper;
     @Mock private ExamNotificationService examNotificationService;
+    @Mock private AchievementEvaluator achievementEvaluator;
 
     private ExamService service;
     private AppUser user;
+    private final List<ExamStatus> savedStatuses = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         service = new ExamService(examRepository, appUserRepository, healthUnitRepository,
                 userServiceHelper, examItemRepository, examMapper, examResultRepository,
                 referenceRangeRepository, ruleRepository, riskAssessmentRepository,
-                riskAssessmentService, examAnalysisService, examIResultMapper,
-                examAnalysisResultMapper, examNotificationService,
+                riskAssessmentService, examAnalysisService, achievementEvaluator,
+                examIResultMapper, examAnalysisResultMapper, examNotificationService,
                 Clock.fixed(NOW.toInstant(), ZoneOffset.UTC));
 
         user = new AppUser();
@@ -96,14 +101,24 @@ class ExamServiceCreateNotificationTest {
     }
 
     @Test
-    @DisplayName("o exame criado ja nasce RELEASED, com a data de liberacao do relogio da aplicacao")
-    void shouldCreateExamAlreadyReleased() {
+    @DisplayName("ao fim do processamento o exame fica RELEASED, com a data de liberacao do relogio da aplicacao")
+    void shouldReleaseExamAtTheEndOfAnalysis() {
         service.create(examCreateDTO());
 
         final ArgumentCaptor<Exam> captor = ArgumentCaptor.forClass(Exam.class);
-        then(examRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(ExamStatus.RELEASED);
-        assertThat(captor.getValue().getReleasedAt()).isEqualTo(NOW);
+        then(examRepository).should(atLeastOnce()).save(captor.capture());
+        final Exam released = captor.getAllValues().getLast();
+        assertThat(released.getStatus()).isEqualTo(ExamStatus.RELEASED);
+        assertThat(released.getReleasedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("o exame percorre COLLECTED -> IN_ANALYSIS -> RELEASED durante o processamento")
+    void shouldWalkThroughExamStatuses() {
+        service.create(examCreateDTO());
+
+        assertThat(savedStatuses)
+                .containsSubsequence(ExamStatus.COLLECTED, ExamStatus.IN_ANALYSIS, ExamStatus.RELEASED);
     }
 
     @Test
@@ -152,6 +167,7 @@ class ExamServiceCreateNotificationTest {
         given(examRepository.save(any(Exam.class))).willAnswer(invocation -> {
             final Exam exam = invocation.getArgument(0);
             exam.setId(EXAM_ID);
+            savedStatuses.add(exam.getStatus());
             return exam;
         });
         given(examIResultMapper.toEntity(any())).willAnswer(invocation -> new ExamResult());

@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.AchivementCode;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,8 +14,7 @@ public class AchievementDTO {
 
     private Long id;
 
-    @Size(max = 50)
-    private String code;
+    private AchivementCode code;
 
     @Size(max = 100)
     private String name;
