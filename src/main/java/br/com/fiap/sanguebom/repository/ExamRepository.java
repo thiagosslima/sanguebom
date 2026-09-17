@@ -36,15 +36,7 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
             @Param("userId") Long userId,
             @Param("examIds") Collection<Long> examIds);
 
-    void updateExamStatusById(Long id, ExamStatus status);
+    long countByUserIdAndStatus(Long userId, ExamStatus status);
 
-    @Query("SELECT COUNT(e) FROM Exam e WHERE e.user.id = :userId AND e.status = :status")
-    long countByStatusAndUserId(Long userId, ExamStatus status);
-
-    @Query("""
-        SELECT e FROM Exam e 
-            WHERE e.user.id = :userId AND e.status = br.com.fiap.sanguebom.model.enums.ExamStatus.RELEASED
-        ORDER BY e.releasedAt DESC
-                """)
-    List<Exam> findLatestReleasedByUserId(Long userId);
+    List<Exam> findTop2ByUserIdAndStatusOrderByCollectedAtDesc(Long userId, ExamStatus status);
 }

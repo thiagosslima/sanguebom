@@ -2,13 +2,13 @@ package br.com.fiap.sanguebom.rulesMotor.achievement;
 
 import br.com.fiap.sanguebom.model.entities.UserAchievement;
 import br.com.fiap.sanguebom.model.enums.AchivementCode;
-import lombok.Getter;
 
-@Getter
-public abstract class AchievementRuleParent {
+public abstract class AchievementRuleParent implements AchievementRule {
 
-    protected abstract AchivementCode getAchievementCode();
+    @Override
+    public abstract AchivementCode getAchievementCode();
 
+    @Override
     public boolean alreadyHasAchievement(AchievementContext context) {
         return context.user().getUserAchievements()
                 .stream()

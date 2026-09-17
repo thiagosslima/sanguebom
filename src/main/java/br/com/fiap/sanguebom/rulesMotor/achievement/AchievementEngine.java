@@ -7,32 +7,34 @@ import br.com.fiap.sanguebom.repository.UserAchievementRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
-public class AchievementService implements AchievementEvaluator {
+public class AchievementEngine implements AchievementEvaluator {
 
     private final List<AchievementRule> achievementRules;
-    private AchievementRepository achievementRepository;
-    private UserAchievementRepository userAchievementRepository;
+    private final AchievementRepository achievementRepository;
+    private final UserAchievementRepository userAchievementRepository;
 
-    public AchievementService(List<AchievementRule> achievementRules) {
+    public AchievementEngine(final List<AchievementRule> achievementRules,
+                             final AchievementRepository achievementRepository,
+                             final UserAchievementRepository userAchievementRepository) {
         this.achievementRules = achievementRules;
+        this.achievementRepository = achievementRepository;
+        this.userAchievementRepository = userAchievementRepository;
     }
-
 
     @Override
     public void evaluate(AppUser user, Exam exam, RiskAssessment riskAssessment) {
 
         AchievementContext context = new AchievementContext(user, exam, riskAssessment);
 
-        for(AchievementRule rule : achievementRules) {
+        for (AchievementRule rule : achievementRules) {
 
-            if(rule.alreadyHasAchievement(context)) {
+            if (rule.alreadyHasAchievement(context)) {
                 continue;
             }
 
-            if(rule.isEligible(context)) {
+            if (rule.isEligible(context)) {
                 grantAchievement(user, rule);
             }
 
@@ -44,17 +46,17 @@ public class AchievementService implements AchievementEvaluator {
         Achievement achievement = findAchievementOrFail(rule);
 
         UserAchievement userAchievement = new UserAchievement();
+        userAchievement.setId(new UserAchievementId(user.getId(), achievement.getId()));
         userAchievement.setAchievement(achievement);
         userAchievement.setUser(user);
         userAchievementRepository.save(userAchievement);
     }
 
     private Achievement findAchievementOrFail(AchievementRule rule) {
-        Achievement achievement = achievementRepository.findByCode(rule.getAchievementCode()).orElseThrow(
-                ()-> new NotFoundException(
+        return achievementRepository.findByCode(rule.getAchievementCode()).orElseThrow(
+                () -> new NotFoundException(
                         String.format("Achievement não configurado para o código: %s ", rule.getAchievementCode())
                 )
         );
-        return achievement;
     }
 }

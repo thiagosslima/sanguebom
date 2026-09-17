@@ -6,10 +6,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 @Component
-public class HealthChampionAchievementRule extends AchievementRuleParent implements AchievementRule  {
+public class HealthChampionAchievementRule extends AchievementRuleParent {
 
-    private static final BigDecimal MINIMUM_ELIGIBLE_SCORE = new BigDecimal(3);
-
+    private static final BigDecimal MAXIMUM_ELIGIBLE_SCORE = new BigDecimal(3);
 
     @Override
     public AchivementCode getAchievementCode() {
@@ -19,8 +18,12 @@ public class HealthChampionAchievementRule extends AchievementRuleParent impleme
     @Override
     public boolean isEligible(AchievementContext context) {
 
+        if (context.riskAssessment() == null || context.riskAssessment().getScore() == null) {
+            return false;
+        }
+
         BigDecimal score = context.riskAssessment().getScore();
 
-        return score.compareTo(MINIMUM_ELIGIBLE_SCORE) >= 0;
+        return score.compareTo(MAXIMUM_ELIGIBLE_SCORE) <= 0;
     }
 }
