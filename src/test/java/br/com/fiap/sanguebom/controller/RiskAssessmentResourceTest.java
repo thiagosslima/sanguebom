@@ -6,11 +6,11 @@ import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.service.RiskAssessmentService;
 import io.github.wimdeblauwe.errorhandlingspringbootstarter.servlet.ServletErrorHandlingConfiguration;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.MediaType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -128,7 +128,7 @@ class RiskAssessmentResourceTest {
         var riskAssessmentId = 1L;
 
         mockMvc.perform(put("/api/riskAssessments/{id}", riskAssessmentId)
-                        .contentType(String.valueOf(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"score\": 75.5, \"level\": \"HIGH\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").value(riskAssessmentId));

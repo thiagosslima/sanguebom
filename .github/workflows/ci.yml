@@ -1,0 +1,66 @@
+name: CI
+
+# Orquestrador. Chama as quatro suites reutilizaveis.
+# Cada uma tambem roda sozinha pela aba Actions (Run workflow).
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: Rodar testes unitarios
+        type: boolean
+        default: true
+      run_coverage:
+        description: Rodar gate de cobertura (exige os testes)
+        type: boolean
+        default: true
+      run_static_analysis:
+        description: Rodar CodeQL + SpotBugs
+        type: boolean
+        default: true
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Testes
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_tests }}
+    permissions:
+      contents: read
+      checks: write
+    uses: ./.github/workflows/tests.yml
+
+  # Reaproveita o jacoco.xml do job de testes em vez de rodar o mvn de novo.
+  # Nota: se run_tests=false, este job e pulado por dependencia. Para rodar
+  # so a cobertura, use o dispatch do proprio workflow Coverage.
+  coverage:
+    name: Cobertura
+    needs: tests
+    if: >-
+      ${{ (github.event_name == 'pull_request')
+          || (github.event_name == 'workflow_dispatch' && inputs.run_coverage) }}
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    uses: ./.github/workflows/coverage.yml
+    with:
+      reuse-artifact: true
+
+  static-analysis:
+    name: Analise estatica
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_static_analysis }}
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+      pull-requests: write
+    uses: ./.github/workflows/static-analysis.yml
