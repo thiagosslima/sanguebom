@@ -19,7 +19,6 @@ public class ReferenceRangeDTO {
 
     private Long id;
 
-    @Size(max = 20)
     private Sex sex;
 
     @Digits(integer = 5, fraction = 2)

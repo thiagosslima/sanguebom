@@ -32,7 +32,6 @@ public class RuleDTO {
 
     private Boolean maxInclusive;
 
-    @Size(max = 30)
     private ExamResultFlag level;
 
     @Digits(integer = 4, fraction = 2)
