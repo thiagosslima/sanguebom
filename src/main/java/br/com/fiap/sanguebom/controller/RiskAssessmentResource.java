@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ import java.util.List;
 
 
 @RestController
+@Validated
 @RequestMapping(value = "/api/riskAssessments", produces = MediaType.APPLICATION_JSON_VALUE)
 public class RiskAssessmentResource {
 
@@ -38,7 +40,7 @@ public class RiskAssessmentResource {
         return ResponseEntity.ok(riskAssessmentService.get(id));
     }
 
-    @GetMapping("/timeline/{userId}")
+    @GetMapping("/{userId}/timeline")
     @Operation(summary = "Evolução temporal de um risco do paciente",
             description = "Retorna uma página da série histórica de um risco do paciente, "
                     + "com a pontuação e a classificação em cada data.")
