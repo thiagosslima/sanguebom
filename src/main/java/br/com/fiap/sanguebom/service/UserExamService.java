@@ -28,19 +28,24 @@ public class UserExamService {
     private final ExamResultRepository examResultRepository;
     private final UserExamMapper userExamMapper;
     private final MessageService messageService;
+    private final UserServiceHelper userServiceHelper;
 
     public UserExamService(final ExamRepository examRepository,
             final ExamResultRepository examResultRepository,
             final UserExamMapper userExamMapper,
-            final MessageService messageService) {
+            final MessageService messageService,
+            final UserServiceHelper userServiceHelper) {
         this.examRepository = examRepository;
         this.examResultRepository = examResultRepository;
         this.userExamMapper = userExamMapper;
         this.messageService = messageService;
+        this.userServiceHelper = userServiceHelper;
     }
 
     @Transactional(readOnly = true)
     public PageResponse<ExamSummaryDTO> history(final Long userId, final int page, final int size) {
+        userServiceHelper.getUserByIdOrFail(userId);
+
         return PageResponse.of(examRepository
                 .findByUserId(userId, PageRequest.of(page, size, NEWEST_FIRST))
                 .map(userExamMapper::toSummary));

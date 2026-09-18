@@ -55,6 +55,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -186,6 +187,7 @@ class UserExamResourceTest {
     @Test
     @DisplayName("GET exams devolve a pagina com o resumo e consulta o repositorio ordenando por coleta desc")
     void shouldReturnPagedHistory() throws Exception {
+        givenUserExists();
         given(examRepository.findByUserId(anyLong(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of(exam()), PageRequest.of(0, 1), 3));
 
@@ -209,6 +211,7 @@ class UserExamResourceTest {
     @Test
     @DisplayName("GET exams sem parametros usa a primeira pagina com 10 itens")
     void shouldApplyDefaultPagination() throws Exception {
+        givenUserExists();
         given(examRepository.findByUserId(anyLong(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
@@ -221,6 +224,19 @@ class UserExamResourceTest {
         then(examRepository).should().findByUserId(eq(USER_ID), pageable.capture());
         assertThat(pageable.getValue().getPageNumber()).isZero();
         assertThat(pageable.getValue().getPageSize()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("GET exams de usuario inexistente devolve 404, e nao uma pagina vazia")
+    void shouldReturnNotFoundWhenUserDoesNotExistOnHistory() throws Exception {
+        given(appUserRepository.findById(99L)).willReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/users/{userId}/exams", 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.detail").value("Usuário não encontrado para o id: 99"));
+
+        then(examRepository).should(never()).findByUserId(anyLong(), any(Pageable.class));
     }
 
     @Test
