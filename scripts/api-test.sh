@@ -5,10 +5,9 @@
 #   ./scripts/api-test.sh           recria o ambiente do zero e roda (padrao)
 #   ./scripts/api-test.sh --keep     roda contra o ambiente que ja estiver de pe
 #
-# Por que recriar por padrao: a pasta "10 - Bugs conhecidos" grava linhas que a
-# API nao tem como desfazer (nao existe nenhum endpoint DELETE no projeto), e
-# uma delas - conquista com code duplicado - passa a derrubar o POST /api/exams.
-# Partir de um banco limpo e o que torna a execucao reproduzivel.
+# Recriar por padrao mantem a execucao reproduzivel: o projeto nao expoe nenhum
+# endpoint DELETE, entao a collection nao tem como limpar o que cria. Com
+# --keep ela roda sobre o banco atual, o que tambem funciona, so acumula dados.
 #
 # A pasta "99 - SSE (manual)" fica de fora: o emissor SSE mantem a conexao
 # aberta por 30 minutos e travaria a execucao.
@@ -40,7 +39,6 @@ FOLDERS=(
     "07 - Risco"
     "08 - Gamificacao"
     "09 - CRUD administrativo"
-    "10 - Bugs conhecidos (esperado: VERMELHO)"
 )
 
 reset="yes"
@@ -61,8 +59,7 @@ if [[ "$reset" == "yes" ]]; then
     info "Recriando o ambiente do zero para uma execucao reproduzivel..."
     ./scripts/start.sh --clean --yes
 else
-    warn "Rodando sobre o banco atual (--keep). Se a pasta 10 ja rodou aqui, espere ruido "
-    warn "nas pastas 03 a 07: o BUG 10 deixa o motor de conquistas quebrado."
+    warn "Rodando sobre o banco atual (--keep), sem recriar nada."
 fi
 
 if ! curl -fsS -m 5 "${BASE_URL}/" >/dev/null 2>&1; then
@@ -77,7 +74,6 @@ for f in "${FOLDERS[@]}"; do
 done
 
 info "Executando a collection (${#FOLDERS[@]} pastas)..."
-warn "A pasta '10 - Bugs conhecidos' falha de proposito: cada falha e um bug do projeto."
 printf '\n'
 
 set +e
@@ -92,7 +88,6 @@ set -e
 
 printf '\n'
 info "Relatorio detalhado: ${REPORT_DIR}/report.json"
-info "Bugs conhecidos documentados em: postman/RELATORIO.md"
+info "Historico dos bugs ja corrigidos: postman/RELATORIO.md"
 
-# Saida nao-zero e esperada enquanto a pasta 10 tiver falhas em aberto.
 exit "$status"

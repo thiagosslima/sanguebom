@@ -1,28 +1,32 @@
-# Relatório da execução da collection
+# Bugs encontrados pela collection
 
-Gerado a partir da execução de `./scripts/api-test.sh` contra um banco recriado do zero
-(`./scripts/start.sh --clean`), com todas as 7 migrations aplicadas.
+Este documento registra os defeitos que a collection expôs quando foi executada pela primeira vez
+contra um banco recriado do zero, e como cada um foi corrigido.
 
-**Resultado:** 136 requests, 195 asserções, **19 falhas — todas na pasta `10 - Bugs conhecidos`**.
-As pastas `00` a `09` passam 100%. Cada falha da pasta 10 corresponde a um dos 10 bugs abaixo:
-a asserção descreve o comportamento correto e falha enquanto o defeito existir.
+**Todos os 10 bugs estão corrigidos.** A collection hoje roda com **139 requests e 204 asserções,
+zero falhas**, e cada bug abaixo tem pelo menos uma asserção que falharia de novo se a correção
+fosse revertida.
 
-Dos 59 endpoints, **14 estão total ou parcialmente quebrados**.
+Antes das correções, **14 dos 59 endpoints estavam total ou parcialmente quebrados**.
+
+| # | Bug | Endpoints | Correção |
+|---|---|---|---|
+| 1 | `@Size` sobre enum derruba a escrita | 6 | `9f0afa8` |
+| 2 | `reference_range.sex = 'ALL'` | 3 | `72e2570` |
+| 3 | `rule.level = 'CRITICO'` | 1 | `72e2570` |
+| 4 | `POST /api/userAchievements` não persiste | 1 | `036c91c` |
+| 5 | `/api/userAchievements/{id}` com chave composta | 2 | `036c91c` |
+| 6 | `id` repetido na listagem de conquistas | 1 | `036c91c` |
+| 7 | `PUT /api/exams` cria exame órfão | 1 | `b3eeeb2` |
+| 8 | Cidadão duplicado | 1 | `3ab3142` |
+| 9 | Histórico não valida o cidadão | 1 | `514b61d` |
+| 10 | `code` de conquista duplicado derruba o `POST /api/exams` | 1 | `3ab3142` |
 
 ---
 
-## BUG 1 — `@Size` sobre enum derruba 6 endpoints de escrita
+## BUG 1 — `@Size` sobre enum derrubava 6 endpoints de escrita
 
-**Severidade: alta.** POST e PUT de três recursos respondem sempre 500.
-
-| Endpoint | Hoje |
-|---|---|
-| `POST /api/referenceRanges` | 500 |
-| `PUT /api/referenceRanges/{id}` | 500 |
-| `POST /api/rules` | 500 |
-| `PUT /api/rules/{id}` | 500 |
-| `POST /api/examResults` | 500 |
-| `PUT /api/examResults/{id}` | 500 |
+**Severidade: alta.** POST e PUT de três recursos respondiam sempre 500.
 
 ```
 HV000030: No validator could be found for constraint
@@ -30,233 +34,189 @@ HV000030: No validator could be found for constraint
 'br.com.fiap.sanguebom.model.enums.Sex'. Check configuration for 'sex'
 ```
 
-`@Size` vale para `String` e `Collection`, não para enum. O Hibernate Validator resolve o
-validador ao montar os metadados do DTO, **antes de olhar o valor** — por isso o erro acontece
-mesmo quando o campo não é enviado no corpo. Não existe workaround pelo lado do cliente.
+`@Size` vale para `String` e `Collection`, não para enum. O Hibernate Validator resolve o validador
+ao montar os metadados do DTO, **antes de olhar o valor** — por isso o erro acontecia mesmo quando o
+campo não era enviado. Não havia workaround pelo lado do cliente: `POST`/`PUT` de
+`/api/referenceRanges`, `/api/rules` e `/api/examResults` eram 500 incondicionalmente, e nenhuma
+faixa de referência ou regra clínica podia ser cadastrada pela API.
 
-- `model/dtos/ReferenceRangeDTO.java:22` — `@Size(max = 20)` sobre `Sex sex`
-- `model/dtos/RuleDTO.java:35` — `@Size(max = 30)` sobre `ExamResultFlag level`
-- `model/dtos/ExamResultDTO.java:32` — `@Size(max = 30)` sobre `ExamResultFlag flag`
+**Correção:** removidas as três anotações (`ReferenceRangeDTO.sex`, `RuleDTO.level`,
+`ExamResultDTO.flag`). O tamanho da coluna já é garantido por `@Column(length)` na entidade e o
+conjunto de valores válidos já é restrito pelo próprio enum.
 
-**Correção:** remover as três anotações. O tamanho da coluna já é garantido por
-`@Column(length = …)` na entidade, e o valor já é restrito pelo próprio enum. Se a intenção era
-exigir preenchimento, a anotação correta é `@NotNull`.
+**Regressão:** os requests de `POST`/`PUT` desses três recursos na pasta `09` enviam `sex`, `level`
+e `flag` preenchidos de propósito, e conferem o valor gravado na leitura seguinte.
 
-**Consequência prática:** nenhuma regra clínica ou faixa de referência pode ser cadastrada pela
-API — só por migration.
-
----
-
-## BUG 2 — `reference_range.sex = 'ALL'` não existe no enum `Sex`
-
-**Severidade: alta.** Quebra a listagem e o catálogo público.
-
-| Endpoint | Hoje |
-|---|---|
-| `GET /api/referenceRanges` | 500 |
-| `GET /api/v1/exam-items/GLI_JEJUM/reference-ranges` | 500 |
-| `GET /api/v1/exam-items/COL_TOTAL/reference-ranges` | 500 |
-
-```
-No enum constant br.com.fiap.sanguebom.model.enums.Sex.ALL
-```
-
-`db/migration/V20260821195000__INSERT_INICIAL_DADOS.sql:27-28` grava `'ALL'`, mas
-`model/enums/Sex.java` só tem `M`, `F`, `MALE`, `FEMALE`. A coluna é
-`@Enumerated(EnumType.STRING)`, então qualquer consulta que carregue essas duas linhas estoura.
-
-Os 11 itens da `V20260902100000` gravam `sex = NULL` e funcionam normalmente — o problema é
-restrito aos dois itens da carga inicial.
-
-**Correção (escolher uma):** migration que faça `UPDATE reference_range SET sex = NULL WHERE sex = 'ALL'`
-(NULL já é a convenção usada para "vale para ambos os sexos"), ou acrescentar `ALL` ao enum `Sex`.
-
-> Observação: no banco local que existia antes deste trabalho, essas linhas estavam com `sex = NULL`
-> — alguém corrigiu direto no banco em vez de na migration. Por isso o bug só reaparece em
-> ambiente novo, que é exatamente o que acontece em CI e em qualquer máquina nova.
-
----
-
-## BUG 3 — `rule.level = 'CRITICO'` não existe no enum `ExamResultFlag`
-
-**Severidade: alta.** `GET /api/rules` responde 500.
-
-```
-No enum constant br.com.fiap.sanguebom.model.enums.ExamResultFlag.CRITICO
-```
-
-Mesmo padrão do BUG 2: `V20260821195000__INSERT_INICIAL_DADOS.sql:34` grava `'CRITICO'`, ausente
-do enum (`IN_ANALYSIS`, `NORMAL`, `ATTENTION`, `LOW`, `HIGH`, `OPTIMAL`, `VERY_HIGH`, `ALERTA`).
-
-**Correção:** migration trocando `'CRITICO'` por `'VERY_HIGH'` (que é o valor usado pelas regras
-equivalentes da `V20260902100000`).
-
----
-
-## BUG 4, 5 e 6 — `/api/userAchievements` quebrado em 3 dos 4 handlers
-
-**Severidade: alta.** A entidade tem chave composta; o recurso trata como `Long`.
-
-| Endpoint | Hoje | Erro |
-|---|---|---|
-| `POST /api/userAchievements` | 500 | `Identifier of entity '…UserAchievement' must be manually assigned before calling 'persist()'` |
-| `GET /api/userAchievements/{id}` | 500 | `Supplied id had wrong type: … has id type '…UserAchievementId' but supplied id was of type 'java.lang.Long'` |
-| `PUT /api/userAchievements/{id}` | 500 | idem |
-| `GET /api/userAchievements` | 200 | funciona, mas os `id` vêm repetidos |
-
-`model/entities/UserAchievement.java` usa `@EmbeddedId UserAchievementId` (chave composta
-`user_id` + `achievement_id`), e a tabela `user_achievement` **não tem coluna `id`** — a PK é
-`(user_id, achievement_id)`.
-
-- **BUG 4:** `service/UserAchievementService.java:39` monta a entidade sem preencher o `@EmbeddedId`.
-- **BUG 5:** `controller/UserAchievementResource.java:32` e `:45` declaram `@PathVariable Long id`.
-  Um recurso por id não tem como existir enquanto a chave for composta.
-- **BUG 6:** `service/UserAchievementService.java:42` devolve `getId().getAchievementId()`, e o
-  `UserAchievementDTO` expõe esse valor no campo `id`. Registros de cidadãos diferentes chegam ao
-  cliente com o mesmo `id` — que portanto não identifica nada e não serve para nenhuma operação
-  seguinte. Confirmado na execução: 6 registros, 3 ids distintos.
-
-**Correção:** ou dar à tabela uma PK própria (`id bigserial`) e usar `@Id`, ou trocar as rotas por
-`/api/users/{userId}/achievements/{achievementId}` e remover o campo `id` do DTO.
-
-**Consequência prática:** conquistas só podem ser concedidas pelo motor de regras, nunca pela API.
-
----
-
-## BUG 7 — `PUT /api/exams/{id}` cria um exame órfão em vez de atualizar
-
-**Severidade: crítica — corrompe dados a cada chamada.**
-
-```java
-// service/ExamService.java:273
-public void update(final Long id, final ExamRecoverDTO examRecoverDTO) {
-    examRepository.findById(id)
-            .orElseThrow(NotFoundException::new);   // o id só serve para o 404
-    Exam exam = examMapper.toEntity(examRecoverDTO); // entidade NOVA, sem id
-    examRepository.save(exam);                       // INSERT, não UPDATE
-}
-```
-
-O `id` do path é usado apenas para a checagem de existência. Em seguida o método monta uma entidade
-nova a partir do DTO — que não traz `id` — e chama `save()`, o que resulta em **INSERT**. Como o
-`ExamMapper` também não mapeia `user` nem `healthUnit` a partir de `ExamRecoverDTO`, a linha nova
-nasce com `user_id` e `health_unit_id` nulos.
-
-Reproduzido: `PUT /api/exams/1` respondeu `200`, o exame 1 permaneceu idêntico, e a tabela `exam`
-ganhou uma linha nova sem cidadão e sem unidade de saúde.
-
-**Correção:** atualizar a entidade recuperada (`mapToEntity(dto, exam)` no padrão usado pelos
-outros services) em vez de construir uma nova, e mapear `user`/`healthUnit` no `ExamMapper`.
-
----
-
-## BUG 8 — `POST /api/appUsers` aceita e-mail e CPF duplicados
+## BUG 2 e 3 — valores de seed fora dos enums Java
 
 **Severidade: alta.**
 
-`service/AppUserService.java:33` salva direto, sem nenhuma checagem de unicidade, e as colunas
-`email` e `cpf_hash` não têm unique constraint. A exceção `UserAlreadyExistsException` (422) existe
-no projeto mas **nunca é lançada em lugar nenhum**.
+```
+No enum constant br.com.fiap.sanguebom.model.enums.Sex.ALL
+No enum constant br.com.fiap.sanguebom.model.enums.ExamResultFlag.CRITICO
+```
 
-Reproduzido: dois `POST` com o mesmo `email` e o mesmo `cpfHash` responderam `201`.
+A `V20260821195000` gravava `reference_range.sex = 'ALL'` e `rule.level = 'CRITICO'`, valores que
+nunca existiram no código. Como as colunas são `@Enumerated(EnumType.STRING)`, qualquer consulta que
+carregasse essas linhas estourava: `GET /api/referenceRanges`, `GET /api/rules` e o catálogo público
+dos dois itens da carga inicial (`GLI_JEJUM` e `COL_TOTAL`).
 
-Como o `cpf_hash` é a única identificação do cidadão, duplicatas fragmentam o histórico clínico
-entre registros diferentes — o oposto do objetivo do produto, que é o acompanhamento longitudinal.
+**Correção:** `V20260918120000` normaliza os dois valores — `sex` para `NULL`, que já é a convenção
+da `V20260902100000` para "vale para ambos os sexos", e `level` para `VERY_HIGH`, usado pelas regras
+equivalentes. A correção veio em migration nova, e não na original, porque alterar um arquivo já
+aplicado quebraria o checksum do Flyway.
 
-**Correção:** unique constraint em `cpf_hash` e `email` via migration, mais a checagem no service
-lançando `UserAlreadyExistsException`.
+> No banco local de quem já trabalhava no projeto essas linhas estavam corrigidas direto no SQL, e
+> não por migration. Por isso o bug só aparecia em ambiente novo — CI ou máquina nova.
 
----
+## BUG 4, 5 e 6 — `/api/userAchievements` quebrado em 3 dos 4 handlers
 
-## BUG 9 — `GET /api/users/{userId}/exams` não valida o cidadão
+**Severidade: alta.**
+
+A tabela nascia com PK composta `(user_id, achievement_id)` e a entidade usava `@EmbeddedId`, mas o
+`UserAchievementResource` expõe `/api/userAchievements/{id}` com um `Long` e o repositório declara
+`JpaRepository<..., Long>`:
+
+| Endpoint | Erro |
+|---|---|
+| `POST /api/userAchievements` | `Identifier of entity '…UserAchievement' must be manually assigned before calling 'persist()'` |
+| `GET /api/userAchievements/{id}` | `Supplied id had wrong type: … has id type '…UserAchievementId' but supplied id was of type 'java.lang.Long'` |
+| `PUT /api/userAchievements/{id}` | idem |
+
+E o quarto, a listagem, devolvia `getId().getAchievementId()` no campo `id` do DTO — registros de
+cidadãos diferentes chegavam ao cliente com o mesmo `id`. Na prática, conquistas só podiam ser
+concedidas pelo motor de regras.
+
+**Correção:** `V20260918124000` dá à tabela uma chave própria vinda de `primary_sequence`, alinhando
+com todas as demais entidades do projeto. O par `(user_id, achievement_id)` continua único, agora
+como constraint, preservando a garantia de que cada cidadão ganha cada conquista uma única vez; o
+service checa antes de gravar, para que a violação vire 422 e não 500. `UserAchievementId` deixou de
+existir.
+
+**Regressão:** a pasta `08` faz o ciclo completo (POST → GET por id → PUT), confere que o `id` do
+DTO é o mesmo usado no path, verifica que a listagem não tem `id` repetido e exige 422 na tentativa
+de conceder a mesma conquista duas vezes.
+
+## BUG 7 — `PUT /api/exams/{id}` criava um exame órfão
+
+**Severidade: crítica — corrompia dados a cada chamada.**
+
+```java
+examRepository.findById(id).orElseThrow(NotFoundException::new); // o id só servia para o 404
+Exam exam = examMapper.toEntity(examRecoverDTO);                 // entidade NOVA, sem id
+examRepository.save(exam);                                       // INSERT, não UPDATE
+```
+
+Como o DTO enviado pelo cliente não traz `id`, o `save()` virava INSERT. E como o `ExamMapper` não
+mapeia `user` nem `healthUnit` a partir de `ExamRecoverDTO`, a linha nova nascia com `user_id` e
+`health_unit_id` nulos. Reproduzido: `PUT /api/exams/1` respondia 200, o exame 1 permanecia
+idêntico, e a tabela `exam` ganhava uma linha órfã.
+
+**Correção:** o método passa a copiar os campos editáveis sobre o exame já carregado, no mesmo padrão
+dos demais services, e a resolver as associações a partir dos ids do DTO. Como `ExamRecoverDTO` não
+tem nenhuma validação, uma associação só é trocada quando vem informada — assim um PUT parcial deixa
+de apagar vínculos.
+
+**Regressão:** três requests encadeados na pasta `09` — conta os exames, faz o PUT com um marcador
+único, e confere que o exame do path mudou, que o total não aumentou e que nenhum exame ficou sem
+cidadão ou unidade.
+
+## BUG 8 — `POST /api/appUsers` aceitava e-mail e CPF duplicados
+
+**Severidade: alta.**
+
+`AppUserService.create` salvava direto, sem checagem, e as colunas não tinham índice único. Dois POST
+com o mesmo `email` e `cpfHash` respondiam 201. A exceção `UserAlreadyExistsException` (422) existia
+no projeto mas **nunca era lançada**.
+
+Como o `cpf_hash` é a única identificação do cidadão, duplicatas fragmentam o histórico clínico entre
+registros diferentes — o oposto do objetivo do produto, que é o acompanhamento longitudinal.
+
+**Correção:** `V20260918123000` cria índices únicos em `cpf_hash` e `lower(email)`, e o service passa
+a lançar `UserAlreadyExistsException` no create e no update (neste, excluindo o próprio cidadão da
+checagem). A migration neutraliza duplicatas pré-existentes com um sufixo, sem apagar nenhuma linha,
+para que exames e perfis continuem apontando para os mesmos ids.
+
+## BUG 9 — `GET /api/users/{userId}/exams` não validava o cidadão
 
 **Severidade: baixa.**
 
-`service/UserExamService.java:43` consulta os exames sem checar se o cidadão existe e devolve uma
-página vazia. `GET /api/users/999999/exams` responde `200` com `content: []`.
+`UserExamService.history` consultava os exames sem checar se o cidadão existe, então
+`GET /api/users/999999/exams` respondia 200 com `content: []`. Divergia de `/exam-goal`,
+`/notifications` e dos endpoints do médico, que devolvem 404 no mesmo cenário, e deixava o cliente
+sem como distinguir "cidadão inexistente" de "cidadão sem exames".
 
-Diverge de `/exam-goal`, `/notifications` e dos endpoints do médico, que devolvem `404` no mesmo
-cenário. O cliente não tem como distinguir "cidadão inexistente" de "cidadão sem exames".
+**Correção:** passa a usar o `UserServiceHelper`, já empregado pelos demais fluxos. Coberto também
+por dois testes JUnit, que verificam inclusive que o repositório de exames não chega a ser
+consultado.
 
-**Correção:** reaproveitar o `UserServiceHelper` já usado pelos outros fluxos.
+## BUG 10 — `code` de conquista duplicado derrubava o `POST /api/exams`
 
----
+**Severidade: alta.** Uma escrita de catálogo quebrava o fluxo principal do sistema.
 
-## BUG 10 — `code` duplicado de conquista derruba o `POST /api/exams`
-
-**Severidade: alta.** Uma escrita de catálogo quebra o fluxo principal do sistema.
-
-`achievement.code` representa uma conquista única — o enum `AchivementCode` tem 3 valores — mas não
-há unique constraint na coluna nem checagem em `AchievementService.create`. `POST /api/achievements`
-com um `code` que já existe responde `201`.
-
-A partir daí, `AchievementRepository.findByCode()` (`repository/AchievementRepository.java:13`,
-retorno `Optional<Achievement>`) passa a levantar:
+`achievement.code` identifica a conquista — o enum `AchivementCode` tem 3 valores — mas não havia
+constraint nem checagem. Com duas linhas do mesmo code, `AchievementRepository.findByCode()`
+(retorno `Optional`) passava a levantar:
 
 ```
 Query did not return a unique result: 2 results were returned
 ```
 
-E como o motor de conquistas roda dentro do `POST /api/exams`, **a ingestão de exames passa a
-responder 500** de forma intermitente, dependendo de qual conquista está sendo avaliada.
+E como o motor de conquistas roda dentro do `POST /api/exams`, a **ingestão de exames** começava a
+responder 500. Agravante: o projeto não expõe nenhum `DELETE`, então a linha duplicada não podia ser
+removida sem acesso direto ao banco.
 
-**Agravante:** o projeto **não expõe nenhum endpoint DELETE** — em nenhum dos 18 controllers. A
-linha duplicada não tem como ser removida sem acesso direto ao banco. Foi por isso que
-`./scripts/api-test.sh` passou a recriar o ambiente por padrão.
+**Correção:** índice único em `achievement.code` na `V20260918123000` e checagem no service, com a
+nova `DuplicatedAchievementException` (422, acompanhando a `DuplicatedExamResultException` que o
+projeto já usa para o mesmo tipo de conflito). A migration remove duplicatas pré-existentes
+preservando o registro original de cada code; ali o sufixo não serve, porque a coluna é
+`@Enumerated(EnumType.STRING)` e um valor fora do enum recriaria o BUG 2.
 
-**Correção:** unique constraint em `achievement.code` via migration, mais a checagem no service.
+> Efeito colateral esperado: como os 3 codes do enum já vêm semeados, `POST /api/achievements`
+> passa a responder 422 sempre. O catálogo de conquistas é fechado por natureza — criar uma nova
+> exige antes acrescentar o valor ao enum.
 
 ---
 
-# Achados que não são de endpoint
+# Achados de configuração
 
-## O Swagger não mostra a API
+## O Swagger não mostrava a API — corrigido
 
-`src/main/resources/application.properties:32`
+`springdoc.pathsToMatch=/` limitava o documento OpenAPI ao path `/`. O Swagger UI subia, mas exibia
+**apenas** o `HomeResource#index`. Como os controllers e DTOs já trazem `@Tag`, `@Operation` e
+`@Schema` escritos, era documentação pronta e não publicada.
 
-```properties
-springdoc.pathsToMatch=/
-```
+Passou a casar também `/api/**`; o `/v3/api-docs` agora descreve as 36 rotas com as 59 operações.
 
-Isso limita o documento OpenAPI ao path `/`. O Swagger UI sobe, mas exibe **apenas** o
-`HomeResource#index` — nenhum dos 59 endpoints reais aparece. Como o projeto tem `@Tag`,
-`@Operation` e `@Schema` espalhados pelos controllers e DTOs, é documentação escrita e não
-publicada.
+## O build estava quebrado no `develop` — corrigido
 
-**Correção:** `springdoc.pathsToMatch=/api/**` (ou remover a linha).
+`RiskAssessmentServiceTest` importava `RiskAssessmentClassifier` do pacote `rulesMotor` em vez de
+`rulesMotor.exam`. Como `mvn package -DskipTests` ainda **compila** os testes, o
+`docker compose up --build` falhava na etapa de build da imagem — o projeto não subia.
 
-## O build estava quebrado no `develop`
-
-`src/test/java/br/com/fiap/sanguebom/service/RiskAssessmentServiceTest.java:16` importava
-`br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier`, mas a classe está em
-`br.com.fiap.sanguebom.rulesMotor.exam`. Como `mvn package -DskipTests` ainda **compila** os testes,
-o `docker compose up --build` falhava na etapa de build da imagem — ou seja, o projeto não subia.
-
-Corrigido neste trabalho (uma linha). Com a correção, `mvn test` passa: 0 falhas, 0 erros.
-
-## A migration `V20260902100000` estava fora de ordem
+## A migration `V20260902100000` estava fora de ordem — corrigido
 
 Ela entrou no repositório depois que a `V20260907120000` já havia sido aplicada. Com
 `validate-on-migrate=true` e out-of-order desligado, o Flyway se recusava a subir em qualquer banco
-nesse estado — o que incluía o banco local deste ambiente, onde só 5 das 7 migrations constavam
-aplicadas e o seed grande de exames nunca havia rodado.
+nesse estado. Resolvido com `spring.flyway.out-of-order=true`.
 
-Resolvido com `spring.flyway.out-of-order=true` em `application.properties`.
+---
 
-## O README descreve uma API que não existe
+# Em aberto: o README descreve uma API que não existe
+
+Não mexido, porque é decisão de produto e não correção de defeito:
 
 - A seção **🔐 Segurança** descreve Spring Security, JWT e os perfis `ROLE_CITIZEN` / `ROLE_LAB` /
   `ROLE_DOCTOR`. **Nada disso existe no código**: não há `spring-boot-starter-security` no
-  `pom.xml`, nenhum `SecurityFilterChain`, nenhum `@PreAuthorize`. Os 59 endpoints são abertos, e
+  `pom.xml`, nenhum `SecurityFilterChain`, nenhum `@PreAuthorize`. Os 59 endpoints são abertos e
   nenhum deles pode responder 401 ou 403.
 - A frase "o isolamento dos dados do cidadão é realizado a partir do usuário identificado no token"
   não se sustenta: todo endpoint por cidadão recebe o `userId` pela URL. Qualquer chamador lê os
   exames, o risco e as notificações de qualquer pessoa — inclusive a timeline clínica completa em
-  `/api/v1/doctor/patients/{userId}/timeline`.
+  `/api/v1/doctor/patients/{userId}/timeline`. A única barreira existente é o 404 de
+  `/api/users/{userId}/exams/{examId}` quando o exame é de outro cidadão, e a collection cobre isso.
 - A seção **📡 Principais endpoints** lista rotas que não existem: `/api/v1/auth/login`,
-  `/api/v1/auth/token`, toda a família `/api/v1/users/me/*` e `/api/v1/labs/*`. As rotas reais são
-  `/api/appUsers`, `/api/exams`, `/api/users/{userId}/...`, e só `/api/v1/doctor/patients/{userId}/...`
-  e `/api/v1/exam-items` usam o prefixo `v1`.
+  `/api/v1/auth/token`, toda a família `/api/v1/users/me/*` e `/api/v1/labs/*`.
 
 A collection reflete o código, não o README.
 
@@ -264,7 +224,7 @@ A collection reflete o código, não o README.
 
 # Cobertura
 
-Os 59 handlers dos 18 controllers são exercitados pelo menos uma vez:
+Os 59 handlers dos 18 controllers são exercitados pelo menos uma vez.
 
 | Pasta | Requests | O que cobre |
 |---|---|---|
@@ -272,13 +232,12 @@ Os 59 handlers dos 18 controllers são exercitados pelo menos uma vez:
 | `01 - Catalogo` | 13 | Catálogo público, unidades, itens; resolve os ids usados adiante |
 | `02 - Fixtures` | 12 | Cidadãos e perfis de saúde dos fluxos |
 | `03 - Ingestao de exame e motor de risco` | 17 | `POST /api/exams` e seus 11 caminhos de erro |
-| `04 - Cidadao` | 8 | Meta, histórico, detalhe e isolamento entre cidadãos |
+| `04 - Cidadao` | 9 | Meta, histórico, detalhe e isolamento entre cidadãos |
 | `05 - Notificacoes` | 13 | Histórico, varredura da meta, CRUD de avisos |
 | `06 - Medico` | 12 | Timeline de marcador e comparação de exames |
 | `07 - Risco` | 9 | Avaliações e evolução do risco |
-| `08 - Gamificacao` | 9 | Conquistas e conquistas por cidadão |
-| `09 - CRUD administrativo` | 22 | Os handlers restantes |
-| `10 - Bugs conhecidos` | 20 | Os 10 bugs acima |
+| `08 - Gamificacao` | 14 | Conquistas e conquistas por cidadão |
+| `09 - CRUD administrativo` | 39 | Os handlers restantes e as regressões dos bugs 1, 7 e 8 |
 | `99 - SSE (manual)` | 1 | Fora da execução automatizada |
 
 A pasta `99` fica de fora do runner porque o `SseEmitter` mantém a conexão aberta por 30 minutos

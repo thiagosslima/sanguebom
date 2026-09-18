@@ -69,6 +69,9 @@ DB_NAME=sanguebom
 
 ## ⚡ Subindo com um comando
 
+> Passo a passo completo, incluindo os testes de API e o que fazer quando algo dá errado:
+> **[GUIA.md](GUIA.md)**.
+
 O jeito mais rápido de levantar o ambiente é usar o script de inicialização:
 
 ```bash
@@ -121,10 +124,11 @@ A collection também pode ser importada direto no Postman:
 
 ### Lendo o resultado
 
-As pastas `00` a `09` devem passar **100%**. A pasta `10 - Bugs conhecidos` **falha de propósito**:
-cada asserção dela descreve o comportamento correto de um bug em aberto e continuará vermelha até
-o bug ser corrigido. O relatório completo, com causa e correção sugerida de cada um, está em
-[`postman/RELATORIO.md`](postman/RELATORIO.md).
+São **139 requests e 204 asserções**, e o esperado é **tudo verde**. Qualquer falha é regressão.
+
+A collection foi escrita antes das correções e encontrou 10 bugs, todos já corrigidos; as
+asserções que os expuseram continuam ali como regressão. O histórico, com causa e correção de
+cada um, está em [`postman/RELATORIO.md`](postman/RELATORIO.md).
 
 A pasta `99 - SSE (manual)` fica fora da execução automatizada, porque o stream de notificações
 mantém a conexão aberta por 30 minutos.

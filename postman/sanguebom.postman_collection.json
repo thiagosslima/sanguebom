@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Sangue Bom - API",
-    "description": "Collection automatizada da API do Sangue Bom.\n\n**Nao ha autenticacao.** O projeto nao tem Spring Security nem JWT: os 59 endpoints sao abertos. A secao de seguranca do README descreve um design que nunca foi implementado.\n\nOrdem de execucao: as pastas 00 a 09 devem passar 100%. A pasta 10 falha de proposito, uma falha por bug do projeto. A pasta 99 fica fora da execucao automatizada.\n\nRode com `./scripts/api-test.sh`.",
+    "description": "Collection automatizada da API do Sangue Bom.\n\n**Nao ha autenticacao.** O projeto nao tem Spring Security nem JWT: os 59 endpoints sao abertos. A secao de seguranca do README descreve um design que nunca foi implementado.\n\nOrdem de execucao: as pastas 00 a 09 devem passar 100%. A pasta 99 fica fora da execucao automatizada porque o stream SSE mantem a conexao aberta por 30 minutos.\n\nRode com `./scripts/api-test.sh`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -2195,6 +2195,42 @@
           ]
         },
         {
+          "name": "GET /api/users/999999/exams - FALHA cidadao inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/999999/exams",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "999999",
+                "exams"
+              ]
+            },
+            "description": "Antes devolvia 200 com pagina vazia, divergindo de /exam-goal, /notifications e dos endpoints do medico. O cliente nao tinha como distinguir cidadao inexistente de cidadao sem exames."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "GET /api/users/{userId}/exams/{examId} - detalhe com pre-diagnostico",
           "request": {
             "method": "GET",
@@ -3901,7 +3937,7 @@
                 "achievements"
               ]
             },
-            "description": "V20260917120000 renomeia FIRST_EXAM/HEALTH_HERO e insere PUNCTUAL."
+            "description": "V20260917120000 renomeia FIRST_EXAM/HEALTH_HERO e insere PUNCTUAL. A unicidade do code passou a ser garantida por indice na V20260918123000."
           },
           "event": [
             {
@@ -3923,9 +3959,18 @@
                   "        pm.expect(codes, \"conquista \" + c).to.include(c);",
                   "    });",
                   "});",
-                  "pm.test(\"guarda o id de SANGUE_BOM\", function () {",
-                  "    var a = pm.response.json().filter(function (x) { return x.code === \"SANGUE_BOM\"; })[0];",
-                  "    pm.collectionVariables.set(\"achievementId\", a.id);",
+                  "pm.test(\"nao ha code repetido no catalogo\", function () {",
+                  "    var codes = pm.response.json().map(function (a) { return a.code; });",
+                  "    var unicos = codes.filter(function (v, i) { return codes.indexOf(v) === i; });",
+                  "    pm.expect(unicos.length, \"codes distintos\").to.eql(codes.length);",
+                  "});",
+                  "pm.test(\"guarda os ids de SANGUE_BOM e HEALTH_CHAMPION\", function () {",
+                  "    var itens = pm.response.json();",
+                  "    function idDe(code) {",
+                  "        return itens.filter(function (x) { return x.code === code; })[0].id;",
+                  "    }",
+                  "    pm.collectionVariables.set(\"achievementId\", idDe(\"SANGUE_BOM\"));",
+                  "    pm.collectionVariables.set(\"otherAchievementId\", idDe(\"HEALTH_CHAMPION\"));",
                   "});"
                 ]
               }
@@ -4023,7 +4068,7 @@
                 "{{achievementId}}"
               ]
             },
-            "description": "Reescreve SANGUE_BOM com os proprios valores, para a collection continuar reexecutavel. O POST esta em 10 - Bugs conhecidos: ele duplica o code e quebra o motor de regras.",
+            "description": "Reescreve SANGUE_BOM com os proprios valores, para a collection continuar reexecutavel.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"code\": \"SANGUE_BOM\",\n  \"name\": \"Selo Sangue Bom\",\n  \"description\": \"Concedido ao cidadao que realizou o seu primeiro exame.\",\n  \"active\": true\n}",
@@ -4042,6 +4087,55 @@
                 "exec": [
                   "pm.test(\"status 200\", function () {",
                   "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/achievements - FALHA code ja cadastrado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/achievements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "achievements"
+              ]
+            },
+            "description": "O catalogo de conquistas e fechado: o enum AchivementCode tem tres valores e os tres ja vem semeados, entao todo POST necessariamente colide. Antes da correcao o code repetido era aceito e quebrava o findByCode usado pelo motor de regras, derrubando o POST /api/exams com 500.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"PUNCTUAL\",\n  \"name\": \"Selo Pontual (duplicado)\",\n  \"description\": \"Mesmo code de uma conquista que ja existe.\",\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "    pm.expect(b.title).to.eql(\"Conquista já cadastrada\");",
                   "});"
                 ]
               }
@@ -4108,7 +4202,7 @@
                 "userAchievements"
               ]
             },
-            "description": "O POST /api/exams dispara a avaliacao de conquistas. Este e o unico dos quatro handlers de /api/userAchievements que funciona (ver 10 - Bugs conhecidos)."
+            "description": "Antes da V20260918124000 o DTO projetava o achievement_id no campo id, entao registros de cidadaos diferentes chegavam com o mesmo id."
           },
           "event": [
             {
@@ -4130,6 +4224,195 @@
                   "        return String(ua.user) === esperado;",
                   "    });",
                   "    pm.expect(meus.length, \"conquistas do cidadao principal\").to.be.at.least(1);",
+                  "});",
+                  "pm.test(\"cada registro tem id proprio e unico\", function () {",
+                  "    var ids = pm.response.json().map(function (ua) { return ua.id; });",
+                  "    var unicos = ids.filter(function (v, i) { return ids.indexOf(v) === i; });",
+                  "    pm.expect(unicos.length, \"ids distintos de \" + ids.length + \" registros\")",
+                  "        .to.eql(ids.length);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/userAchievements - concede conquista",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/userAchievements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "userAchievements"
+              ]
+            },
+            "description": "Concedida ao segundo cidadao para nao colidir com o que o motor ja atribuiu ao cidadao principal.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": \"{{otherUserId}}\",\n  \"achievement\": \"{{otherAchievementId}}\",\n  \"earnedAt\": \"{{$isoTimestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 devolve o id de conquista do cidadao\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var id = Number(pm.response.text());",
+                  "    pm.expect(id, \"id retornado\").to.be.a(\"number\").and.to.be.above(0);",
+                  "    pm.collectionVariables.set(\"userAchievementId\", id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/userAchievements/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/userAchievements/{{userAchievementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "userAchievements",
+                "{{userAchievementId}}"
+              ]
+            },
+            "description": "O id do path e a chave propria da tabela, criada pela V20260918124000."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"vincula cidadao e conquista\", function () {",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(String(b.user)).to.eql(String(pm.collectionVariables.get(\"otherUserId\")));",
+                  "    pm.expect(String(b.achievement))",
+                  "        .to.eql(String(pm.collectionVariables.get(\"otherAchievementId\")));",
+                  "    pm.expect(String(b.id))",
+                  "        .to.eql(String(pm.collectionVariables.get(\"userAchievementId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/userAchievements/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/userAchievements/{{userAchievementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "userAchievements",
+                "{{userAchievementId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": \"{{otherUserId}}\",\n  \"achievement\": \"{{otherAchievementId}}\",\n  \"earnedAt\": \"{{$isoTimestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/userAchievements - FALHA conquista ja concedida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/userAchievements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "userAchievements"
+              ]
+            },
+            "description": "O par (user, achievement) e unico: cada cidadao ganha cada conquista uma unica vez. A checagem no service faz a violacao virar 422 em vez de 500.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": \"{{otherUserId}}\",\n  \"achievement\": \"{{otherAchievementId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "    pm.expect(b.title).to.eql(\"Conquista já cadastrada\");",
                   "});"
                 ]
               }
@@ -4156,7 +4439,7 @@
                 "userAchievements"
               ]
             },
-            "description": "Ambos os campos sao @NotNull, entao a validacao barra antes do persist.",
+            "description": "Ambos os campos sao @NotNull.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"earnedAt\": \"{{$isoTimestamp}}\"\n}",
@@ -4217,6 +4500,41 @@
                 }
               }
             }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/userAchievements/999999 - FALHA inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/userAchievements/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "userAchievements",
+                "999999"
+              ]
+            },
+            "description": ""
           },
           "event": [
             {
@@ -4330,6 +4648,103 @@
                   "    var b = pm.response.json();",
                   "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
                   "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/appUsers - cria um cidadao com identificadores fixos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/appUsers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "appUsers"
+              ]
+            },
+            "description": "Preparacao do teste de unicidade. O e-mail e o cpfHash sao sorteados no pre-request para a collection continuar reexecutavel.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"QA Unicidade\",\n  \"birthDate\": \"1990-05-15\",\n  \"email\": \"{{dupEmail}}\",\n  \"cpfHash\": \"{{dupCpfHash}}\",\n  \"status\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 devolve o id de cidadao do teste de unicidade\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var id = Number(pm.response.text());",
+                  "    pm.expect(id, \"id retornado\").to.be.a(\"number\").and.to.be.above(0);",
+                  "    pm.collectionVariables.set(\"dupUserId\", id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/appUsers - FALHA e-mail e CPF ja cadastrados",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/appUsers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "appUsers"
+              ]
+            },
+            "description": "Repete os identificadores do request anterior. Antes da correcao o segundo cadastro respondia 201: como o cpf_hash e a unica identificacao do cidadao, duplicatas fragmentavam o historico clinico entre registros diferentes.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"QA Unicidade (2)\",\n  \"birthDate\": \"1990-05-15\",\n  \"email\": \"{{dupEmail}}\",\n  \"cpfHash\": \"{{dupCpfHash}}\",\n  \"status\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "    pm.expect(b.title).to.eql(\"Usuário já cadastrado\");",
                   "});"
                 ]
               }
@@ -4878,22 +5293,69 @@
           ]
         },
         {
-          "name": "GET /api/referenceRanges/{id}",
+          "name": "POST /api/referenceRanges - cria faixa com sexo definido",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/api/referenceRanges/{{referenceRangeId}}",
+              "raw": "{{baseUrl}}/api/referenceRanges",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "referenceRanges",
-                "{{referenceRangeId}}"
+                "referenceRanges"
               ]
             },
-            "description": "O id vem do catalogo publico: a listagem /api/referenceRanges esta quebrada (ver 10 - Bugs conhecidos) e POST/PUT tambem."
+            "description": "O campo sex vai preenchido de proposito: era ele que disparava o HV000030 (@Size sobre enum) e fazia todo POST e PUT do recurso responder 500.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sex\": \"M\",\n  \"ageMinYears\": \"21.00\",\n  \"ageMaxYears\": \"59.00\",\n  \"version\": \"QA_V1\",\n  \"source\": \"Collection automatizada\",\n  \"validFrom\": \"2020-01-01\",\n  \"examItem\": \"{{newExamItemId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 devolve o id de faixa de referencia\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var id = Number(pm.response.text());",
+                  "    pm.expect(id, \"id retornado\").to.be.a(\"number\").and.to.be.above(0);",
+                  "    pm.collectionVariables.set(\"newReferenceRangeId\", id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/referenceRanges - lista",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/referenceRanges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "referenceRanges"
+              ]
+            },
+            "description": "Quebrava com 'No enum constant Sex.ALL' ate a V20260918120000 normalizar o seed."
           },
           "event": [
             {
@@ -4904,10 +5366,93 @@
                   "pm.test(\"status 200\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test(\"faixa vigente do item GLUCOSE\", function () {",
+                  "pm.test(\"responde array JSON\", function () {",
                   "    var b = pm.response.json();",
-                  "    pm.expect(b.version).to.eql(\"GLYCEMIC_V1\");",
-                  "    pm.expect(b.sex, \"faixa do MVP nao diferencia sexo\").to.be.null;",
+                  "    pm.expect(b).to.be.an(\"array\");",
+                  "    pm.expect(b.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/referenceRanges/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/referenceRanges/{{newReferenceRangeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "referenceRanges",
+                "{{newReferenceRangeId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"faixa criada pela collection, com o sexo gravado\", function () {",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b.version).to.eql(\"QA_V1\");",
+                  "    pm.expect(b.sex).to.eql(\"M\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/referenceRanges/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/referenceRanges/{{newReferenceRangeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "referenceRanges",
+                "{{newReferenceRangeId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sex\": \"F\",\n  \"ageMinYears\": \"18.00\",\n  \"ageMaxYears\": \"65.00\",\n  \"version\": \"QA_V2\",\n  \"source\": \"Collection automatizada\",\n  \"validFrom\": \"2020-01-01\",\n  \"examItem\": \"{{newExamItemId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});"
                 ]
               }
@@ -4950,19 +5495,151 @@
           ]
         },
         {
+          "name": "POST /api/referenceRanges - FALHA item de exame inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/referenceRanges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "referenceRanges"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sex\": \"M\",\n  \"ageMinYears\": \"21.00\",\n  \"version\": \"QA_V1\",\n  \"examItem\": \"999999\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/rules - cria regra com nivel definido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rules"
+              ]
+            },
+            "description": "O campo level vai preenchido de proposito: sem ele nenhuma regra criada pela API seria utilizavel pelo motor de regras.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minValue\": \"0.0000\",\n  \"maxValue\": \"100.0000\",\n  \"minInclusive\": true,\n  \"maxInclusive\": false,\n  \"level\": \"NORMAL\",\n  \"score\": \"1.00\",\n  \"description\": \"Regra de QA\",\n  \"version\": \"QA_V1\",\n  \"active\": true,\n  \"referenceRange\": \"{{newReferenceRangeId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 devolve o id de regra\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var id = Number(pm.response.text());",
+                  "    pm.expect(id, \"id retornado\").to.be.a(\"number\").and.to.be.above(0);",
+                  "    pm.collectionVariables.set(\"newRuleId\", id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/rules - lista",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rules"
+              ]
+            },
+            "description": "Quebrava com 'No enum constant ExamResultFlag.CRITICO' ate a V20260918120000."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"responde array JSON\", function () {",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b).to.be.an(\"array\");",
+                  "    pm.expect(b.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "GET /api/rules/{id}",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/rules/{{ruleId}}",
+              "raw": "{{baseUrl}}/api/rules/{{newRuleId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "rules",
-                "{{ruleId}}"
+                "{{newRuleId}}"
               ]
             },
             "description": ""
@@ -4976,11 +5653,56 @@
                   "pm.test(\"status 200\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test(\"regra clinica do GLUCOSE\", function () {",
+                  "pm.test(\"regra criada pela collection, com o nivel gravado\", function () {",
                   "    var b = pm.response.json();",
-                  "    pm.expect(b.version).to.eql(\"GLYCEMIC_V1\");",
-                  "    pm.expect([\"LOW\", \"NORMAL\", \"ATTENTION\", \"HIGH\", \"VERY_HIGH\", \"OPTIMAL\"])",
-                  "        .to.include(b.level);",
+                  "    pm.expect(b.version).to.eql(\"QA_V1\");",
+                  "    pm.expect(b.level).to.eql(\"NORMAL\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/rules/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rules/{{newRuleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rules",
+                "{{newRuleId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minValue\": \"0.0000\",\n  \"maxValue\": \"120.0000\",\n  \"minInclusive\": true,\n  \"maxInclusive\": true,\n  \"level\": \"ATTENTION\",\n  \"score\": \"2.00\",\n  \"description\": \"Regra de QA (rev)\",\n  \"version\": \"QA_V2\",\n  \"active\": false,\n  \"referenceRange\": \"{{newReferenceRangeId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});"
                 ]
               }
@@ -5004,6 +5726,54 @@
               ]
             },
             "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/rules - FALHA faixa de referencia inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rules"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minValue\": \"0.0000\",\n  \"maxValue\": \"10.0000\",\n  \"level\": \"NORMAL\",\n  \"score\": \"1.00\",\n  \"referenceRange\": \"999999\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -5052,9 +5822,54 @@
                   "    var b = pm.response.json();",
                   "    pm.expect(b).to.be.an(\"array\");",
                   "    pm.expect(b.length).to.be.at.least(1);",
-                  "});",
-                  "pm.test(\"guarda o id do primeiro resultado\", function () {",
-                  "    pm.collectionVariables.set(\"examResultId\", pm.response.json()[0].id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/examResults - cria resultado com classificacao",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/examResults",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "examResults"
+              ]
+            },
+            "description": "O campo flag vai preenchido de proposito, pelo mesmo motivo do sex e do level.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valueNumeric\": \"91.00000\",\n  \"unit\": \"mg/dL\",\n  \"flag\": \"NORMAL\",\n  \"exam\": \"{{examId}}\",\n  \"examItem\": \"{{glucoseItemId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 devolve o id de resultado de exame\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var id = Number(pm.response.text());",
+                  "    pm.expect(id, \"id retornado\").to.be.a(\"number\").and.to.be.above(0);",
+                  "    pm.collectionVariables.set(\"examResultId\", id);",
                   "});"
                 ]
               }
@@ -5088,11 +5903,56 @@
                   "pm.test(\"status 200\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test(\"resultado traz valor, unidade e classificacao\", function () {",
+                  "pm.test(\"resultado vinculado ao exame criado\", function () {",
                   "    var b = pm.response.json();",
-                  "    [\"valueNumeric\", \"unit\", \"flag\", \"exam\", \"examItem\"].forEach(function (k) {",
-                  "        pm.expect(b, \"campo \" + k).to.have.property(k);",
-                  "    });",
+                  "    pm.expect(String(b.exam)).to.eql(String(pm.collectionVariables.get(\"examId\")));",
+                  "    pm.expect(b.flag).to.eql(\"NORMAL\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/examResults/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/examResults/{{examResultId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "examResults",
+                "{{examResultId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valueNumeric\": \"95.00000\",\n  \"unit\": \"mg/dL\",\n  \"valueText\": \"revisado\",\n  \"flag\": \"ATTENTION\",\n  \"exam\": \"{{examId}}\",\n  \"examItem\": \"{{glucoseItemId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});"
                 ]
               }
@@ -5135,9 +5995,9 @@
           ]
         },
         {
-          "name": "PUT /api/exams/999999 - FALHA inexistente",
+          "name": "POST /api/examResults - FALHA exame inexistente",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -5145,20 +6005,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/exams/999999",
+              "raw": "{{baseUrl}}/api/examResults",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "exams",
-                "999999"
+                "examResults"
               ]
             },
-            "description": "O PUT com id valido corrompe dados e esta isolado em 10 - Bugs conhecidos.",
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"collectedAt\": \"{{$isoTimestamp}}\",\n  \"status\": \"RELEASED\",\n  \"userId\": \"{{userId}}\"\n}",
+              "raw": "{\n  \"valueNumeric\": \"91.00000\",\n  \"unit\": \"mg/dL\",\n  \"flag\": \"NORMAL\",\n  \"exam\": \"999999\",\n  \"examItem\": \"{{glucoseItemId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5182,542 +6041,9 @@
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "10 - Bugs conhecidos (esperado: VERMELHO)",
-      "description": "Cada request aqui afirma o comportamento CORRETO e falha enquanto o bug existir. As falhas desta pasta sao o resultado esperado, nao um problema da collection.",
-      "item": [
-        {
-          "name": "BUG 1 - POST /api/referenceRanges responde 500",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/referenceRanges",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "referenceRanges"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: @Size e uma restricao para String/Collection e nao se aplica a enum. O Hibernate Validator resolve o validador ao montar os metadados do DTO, antes de olhar o valor, entao o erro acontece mesmo quando o campo nao e enviado:\n  HV000030: No validator could be found for constraint 'jakarta.validation.constraints.Size' validating type '...'\n\nEFEITO: todo POST e todo PUT do recurso responde 500. Campo: ReferenceRangeDTO.sex (@Size(max=20) sobre o enum Sex). Este request nem envia o campo sex e mesmo assim falha.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ageMinYears\": \"21.00\",\n  \"ageMaxYears\": \"59.00\",\n  \"version\": \"QA_BUG\",\n  \"source\": \"Collection\",\n  \"validFrom\": \"2020-01-01\",\n  \"examItem\": \"{{newExamItemId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 201\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(201);",
-                  "});"
-                ]
-              }
-            }
-          ]
         },
         {
-          "name": "BUG 1 - PUT /api/referenceRanges responde 500",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/referenceRanges/{{referenceRangeId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "referenceRanges",
-                "{{referenceRangeId}}"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: @Size e uma restricao para String/Collection e nao se aplica a enum. O Hibernate Validator resolve o validador ao montar os metadados do DTO, antes de olhar o valor, entao o erro acontece mesmo quando o campo nao e enviado:\n  HV000030: No validator could be found for constraint 'jakarta.validation.constraints.Size' validating type '...'\n\nEFEITO: todo POST e todo PUT do recurso responde 500. Mesmo campo, no caminho de atualizacao.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ageMinYears\": \"18.00\",\n  \"ageMaxYears\": \"65.00\",\n  \"version\": \"QA_BUG\",\n  \"examItem\": \"{{newExamItemId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 1 - POST /api/rules responde 500",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/rules",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "rules"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: @Size e uma restricao para String/Collection e nao se aplica a enum. O Hibernate Validator resolve o validador ao montar os metadados do DTO, antes de olhar o valor, entao o erro acontece mesmo quando o campo nao e enviado:\n  HV000030: No validator could be found for constraint 'jakarta.validation.constraints.Size' validating type '...'\n\nEFEITO: todo POST e todo PUT do recurso responde 500. Campo: RuleDTO.level (@Size(max=30) sobre o enum ExamResultFlag). Consequencia pratica: nenhuma regra clinica pode ser cadastrada pela API, so por migration.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"minValue\": \"0.0000\",\n  \"maxValue\": \"70.0000\",\n  \"minInclusive\": true,\n  \"maxInclusive\": false,\n  \"score\": \"1.00\",\n  \"description\": \"Regra de QA\",\n  \"version\": \"QA_BUG\",\n  \"active\": true,\n  \"referenceRange\": \"{{referenceRangeId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 201\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(201);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 1 - PUT /api/rules responde 500",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/rules/{{ruleId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "rules",
-                "{{ruleId}}"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: @Size e uma restricao para String/Collection e nao se aplica a enum. O Hibernate Validator resolve o validador ao montar os metadados do DTO, antes de olhar o valor, entao o erro acontece mesmo quando o campo nao e enviado:\n  HV000030: No validator could be found for constraint 'jakarta.validation.constraints.Size' validating type '...'\n\nEFEITO: todo POST e todo PUT do recurso responde 500. Mesmo campo, no caminho de atualizacao.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"minValue\": \"0.0000\",\n  \"maxValue\": \"80.0000\",\n  \"score\": \"2.00\",\n  \"version\": \"QA_BUG\",\n  \"active\": true,\n  \"referenceRange\": \"{{referenceRangeId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 1 - POST /api/examResults responde 500",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/examResults",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "examResults"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: @Size e uma restricao para String/Collection e nao se aplica a enum. O Hibernate Validator resolve o validador ao montar os metadados do DTO, antes de olhar o valor, entao o erro acontece mesmo quando o campo nao e enviado:\n  HV000030: No validator could be found for constraint 'jakarta.validation.constraints.Size' validating type '...'\n\nEFEITO: todo POST e todo PUT do recurso responde 500. Campo: ExamResultDTO.flag (@Size(max=30) sobre o enum ExamResultFlag).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"valueNumeric\": \"91.00000\",\n  \"unit\": \"mg/dL\",\n  \"exam\": \"{{examId}}\",\n  \"examItem\": \"{{glucoseItemId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 201\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(201);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 1 - PUT /api/examResults responde 500",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/examResults/{{examResultId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "examResults",
-                "{{examResultId}}"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: @Size e uma restricao para String/Collection e nao se aplica a enum. O Hibernate Validator resolve o validador ao montar os metadados do DTO, antes de olhar o valor, entao o erro acontece mesmo quando o campo nao e enviado:\n  HV000030: No validator could be found for constraint 'jakarta.validation.constraints.Size' validating type '...'\n\nEFEITO: todo POST e todo PUT do recurso responde 500. Mesmo campo, no caminho de atualizacao.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"valueNumeric\": \"95.00000\",\n  \"unit\": \"mg/dL\",\n  \"exam\": \"{{examId}}\",\n  \"examItem\": \"{{glucoseItemId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 2 - GET /api/referenceRanges responde 500",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/referenceRanges",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "referenceRanges"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: a V20260821195000 grava um valor que nao existe no enum Java. Ao carregar essas linhas o Hibernate levanta 'No enum constant', e a consulta inteira quebra. Valor: reference_range.sex = 'ALL', ausente do enum Sex (M, F, MALE, FEMALE). Atinge as duas faixas da carga inicial (itens GLI_JEJUM e COL_TOTAL)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 2 - GET /api/v1/exam-items/GLI_JEJUM/reference-ranges responde 500",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/exam-items/GLI_JEJUM/reference-ranges",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "exam-items",
-                "GLI_JEJUM",
-                "reference-ranges"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: a V20260821195000 grava um valor que nao existe no enum Java. Ao carregar essas linhas o Hibernate levanta 'No enum constant', e a consulta inteira quebra. Mesmo sex='ALL'. O catalogo publico quebra para os dois itens da carga inicial, enquanto os 11 itens da V20260902100000 (sex NULL) funcionam."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 3 - GET /api/rules responde 500",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/rules",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "rules"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: a V20260821195000 grava um valor que nao existe no enum Java. Ao carregar essas linhas o Hibernate levanta 'No enum constant', e a consulta inteira quebra. Valor: rule.level = 'CRITICO', ausente do enum ExamResultFlag (IN_ANALYSIS, NORMAL, ATTENTION, LOW, HIGH, OPTIMAL, VERY_HIGH, ALERTA)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 4 - POST /api/userAchievements responde 500",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/userAchievements",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "userAchievements"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: a entidade UserAchievement usa @EmbeddedId UserAchievementId (chave composta user_id + achievement_id), mas o service monta a entidade sem preencher esse id. O JPA recusa:\n  Identifier of entity '...UserAchievement' must be manually assigned before calling 'persist()'\n\nEFEITO: conquistas so podem ser concedidas pelo motor de regras, nunca pela API.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"user\": \"{{otherUserId}}\",\n  \"achievement\": \"{{achievementId}}\",\n  \"earnedAt\": \"{{$isoTimestamp}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 201\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(201);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 5 - GET /api/userAchievements/{id} responde 500",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/userAchievements/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "userAchievements",
-                "1"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: UserAchievementResource declara o path variable como Long, mas a entidade tem chave composta. O Spring Data recusa:\n  Supplied id had wrong type: entity '...UserAchievement' has id type '...UserAchievementId' but supplied id was of type 'java.lang.Long'\n\nA tabela user_achievement nem sequer tem coluna id (PK = user_id + achievement_id), entao o recurso por id nao tem como existir na forma atual."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 5 - PUT /api/userAchievements/{id} responde 500",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/userAchievements/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "userAchievements",
-                "1"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nMesma causa do GET por id: chave composta acessada como Long.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"user\": \"{{userId}}\",\n  \"achievement\": \"{{achievementId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 200\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(200);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 6 - GET /api/userAchievements devolve ids repetidos",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/userAchievements",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "userAchievements"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: UserAchievementDTO expoe um campo id que a entidade nao tem como coluna. O mapeamento acaba projetando o achievement_id, entao linhas de cidadaos diferentes chegam com o mesmo id.\n\nEFEITO: o id do DTO nao identifica o registro e nao serve para nenhuma operacao subsequente."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"os ids da listagem deveriam ser unicos\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "    var ids = pm.response.json().map(function (ua) { return ua.id; });",
-                  "    var unicos = ids.filter(function (v, i) { return ids.indexOf(v) === i; });",
-                  "    pm.expect(unicos.length, \"ids distintos de \" + ids.length + \" registros\")",
-                  "        .to.eql(ids.length);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 7 - baseline: quantos exames existem antes do PUT",
+          "name": "GET /api/exams - total de exames antes do PUT",
           "request": {
             "method": "GET",
             "header": [],
@@ -5731,7 +6057,7 @@
                 "exams"
               ]
             },
-            "description": "Preparacao do BUG 7. Nao e uma assercao de bug."
+            "description": "Preparacao do teste de regressao do PUT /api/exams."
           },
           "event": [
             {
@@ -5742,10 +6068,8 @@
                   "pm.test(\"status 200\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test(\"guarda o total de exames e a referencia atual\", function () {",
-                  "    var exames = pm.response.json();",
-                  "    pm.collectionVariables.set(\"examCountBefore\", exames.length);",
-                  "    pm.collectionVariables.set(\"putMarker\", \"QA_PUT_\" + Date.now());",
+                  "pm.test(\"guarda o total para conferir depois do PUT\", function () {",
+                  "    pm.collectionVariables.set(\"examCountBefore\", pm.response.json().length);",
                   "});"
                 ]
               }
@@ -5753,7 +6077,7 @@
           ]
         },
         {
-          "name": "BUG 7 - PUT /api/exams/{id} nao atualiza o exame",
+          "name": "PUT /api/exams/{id} - atualiza o exame",
           "request": {
             "method": "PUT",
             "header": [
@@ -5773,7 +6097,7 @@
                 "{{examId2}}"
               ]
             },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nResponde 200, mas nao altera o exame do path. A verificacao esta nos dois requests seguintes.",
+            "description": "",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"collectedAt\": \"{{$isoTimestamp}}\",\n  \"status\": \"RELEASED\",\n  \"externalReference\": \"{{putMarker}}\",\n  \"userId\": \"{{userId}}\",\n  \"healthUnitId\": \"{{healthUnitId}}\"\n}",
@@ -5790,8 +6114,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"o PUT responde 200\", function () {",
-                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "pm.test(\"status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});"
                 ]
               }
@@ -5799,7 +6123,7 @@
           ]
         },
         {
-          "name": "BUG 7 - o exame do path ficou inalterado",
+          "name": "GET /api/exams/{id} - o PUT alterou o exame do path",
           "request": {
             "method": "GET",
             "header": [],
@@ -5814,7 +6138,7 @@
                 "{{examId2}}"
               ]
             },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: ExamService.update faz o findById apenas para o 404-check e depois salva uma entidade NOVA vinda de ExamMapper.toEntity(ExamRecoverDTO). Como o DTO enviado nao traz id, o save() insere em vez de atualizar."
+            "description": "Regressao do bug em que o PUT montava uma entidade nova sem id: respondia 200, nao alterava o exame do path e inseria uma linha orfa a cada chamada."
           },
           "event": [
             {
@@ -5822,10 +6146,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"externalReference deveria refletir o PUT anterior\", function () {",
+                  "pm.test(\"status 200\", function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"externalReference reflete o PUT\", function () {",
                   "    pm.expect(pm.response.json().externalReference)",
                   "        .to.eql(pm.collectionVariables.get(\"putMarker\"));",
+                  "});",
+                  "pm.test(\"os vinculos com cidadao e unidade foram preservados\", function () {",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b.userId, \"userId\").to.not.be.null;",
+                  "    pm.expect(b.healthUnitId, \"healthUnitId\").to.not.be.null;",
+                  "    pm.expect(String(b.userId)).to.eql(String(pm.collectionVariables.get(\"userId\")));",
                   "});"
                 ]
               }
@@ -5833,7 +6165,7 @@
           ]
         },
         {
-          "name": "BUG 7 - o PUT criou um exame orfao",
+          "name": "GET /api/exams - o PUT nao criou exame novo",
           "request": {
             "method": "GET",
             "header": [],
@@ -5847,7 +6179,7 @@
                 "exams"
               ]
             },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nO ExamMapper nao mapeia user nem healthUnit a partir de ExamRecoverDTO, entao cada PUT insere um exame novo com user_id e health_unit_id nulos. Sao dados corrompidos a cada chamada."
+            "description": ""
           },
           "event": [
             {
@@ -5855,12 +6187,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"o PUT nao deveria criar um novo exame\", function () {",
+                  "pm.test(\"status 200\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "    var antes = Number(pm.collectionVariables.get(\"examCountBefore\"));",
-                  "    pm.expect(pm.response.json().length, \"total de exames apos o PUT\").to.eql(antes);",
                   "});",
-                  "pm.test(\"nenhum exame deveria ficar sem cidadao ou sem unidade de saude\", function () {",
+                  "pm.test(\"o total de exames nao mudou\", function () {",
+                  "    var antes = Number(pm.collectionVariables.get(\"examCountBefore\"));",
+                  "    pm.expect(pm.response.json().length, \"total apos o PUT\").to.eql(antes);",
+                  "});",
+                  "pm.test(\"nenhum exame ficou sem cidadao ou sem unidade de saude\", function () {",
                   "    var orfaos = pm.response.json().filter(function (e) {",
                   "        return e.userId === null || e.healthUnitId === null;",
                   "    });",
@@ -5872,9 +6206,9 @@
           ]
         },
         {
-          "name": "BUG 8 - cria um cidadao com e-mail fixo",
+          "name": "PUT /api/exams/999999 - FALHA inexistente",
           "request": {
-            "method": "POST",
+            "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
@@ -5882,19 +6216,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/appUsers",
+              "raw": "{{baseUrl}}/api/exams/999999",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "appUsers"
+                "exams",
+                "999999"
               ]
             },
-            "description": "Preparacao do BUG 8. Este request deve passar.",
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"QA Duplicado\",\n  \"birthDate\": \"1990-05-15\",\n  \"email\": \"duplicado-fixo@sanguebom.test\",\n  \"cpfHash\": \"hash_duplicado_fixo\",\n  \"status\": \"ACTIVE\"\n}",
+              "raw": "{\n  \"collectedAt\": \"{{$isoTimestamp}}\",\n  \"status\": \"RELEASED\",\n  \"userId\": \"{{userId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5908,136 +6243,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status 201\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "pm.test(\"primeiro cadastro do e-mail e legitimo\", function () {",
-                  "    pm.collectionVariables.set(\"dupUserId\", Number(pm.response.text()));",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 8 - POST /api/appUsers repete o mesmo e-mail e CPF",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/appUsers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "appUsers"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: AppUserService.create nao verifica unicidade de email nem de cpfHash, e nao ha unique constraint nessas colunas. A excecao UserAlreadyExistsException (422) existe no projeto mas nunca e lancada.\n\nEFEITO: o mesmo cidadao pode ser cadastrado indefinidamente, e como o cpfHash e a unica identificacao do cidadao, o historico clinico se fragmenta entre duplicatas.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"QA Duplicado (2)\",\n  \"birthDate\": \"1990-05-15\",\n  \"email\": \"duplicado-fixo@sanguebom.test\",\n  \"cpfHash\": \"hash_duplicado_fixo\",\n  \"status\": \"ACTIVE\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"e-mail e cpfHash ja cadastrados deveriam ser recusados (409 ou 422)\",",
-                  "    function () {",
-                  "        pm.expect([409, 422], \"status recebido: \" + pm.response.code)",
-                  "            .to.include(pm.response.code);",
-                  "    });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 10 - POST /api/achievements aceita code duplicado",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/achievements",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "achievements"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: achievement.code representa uma conquista unica (o enum AchivementCode tem 3 valores), mas nao ha unique constraint na coluna nem checagem no service.\n\nEFEITO: com dois registros do mesmo code, AchievementRepository.findByCode() passa a levantar 'Query did not return a unique result: 2 results were returned', e o POST /api/exams comeca a responder 500 ao avaliar conquistas. Ou seja: uma escrita de catalogo derruba o fluxo principal do sistema.\n\nAGRAVANTE: a API nao expoe nenhum DELETE, entao a linha duplicada nao pode ser removida sem ir direto ao banco. E por isso que ./scripts/api-test.sh recria o ambiente por padrao.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"PUNCTUAL\",\n  \"name\": \"Selo Pontual (duplicado)\",\n  \"description\": \"Mesmo code de uma conquista que ja existe.\",\n  \"active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 409\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(409);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "BUG 9 - GET /api/users/{id}/exams nao valida o cidadao",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/999999/exams",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "999999",
-                "exams"
-              ]
-            },
-            "description": "ESTE TESTE DEVE FALHAR enquanto o bug existir. A assercao descreve o comportamento CORRETO, nao o atual. Analise completa em postman/RELATORIO.md.\n\nCAUSA: UserExamService.history consulta os exames sem antes checar se o cidadao existe, e devolve uma pagina vazia.\n\nEFEITO: divergencia com /exam-goal, /notifications e os endpoints do medico, que devolvem 404 no mesmo cenario. Um cliente nao tem como distinguir 'cidadao inexistente' de 'cidadao sem exames'."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"deveria responder 404\", function () {",
-                  "    pm.expect(pm.response.code, \"status recebido\").to.eql(404);",
+                  "pm.test(\"status 404 com corpo RFC-7807\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    var b = pm.response.json();",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"title\");",
+                  "    pm.expect(b, \"corpo do problema\").to.have.property(\"detail\");",
                   "});"
                 ]
               }
@@ -6093,6 +6303,24 @@
       "key": "baseUrl",
       "value": "http://localhost:8080",
       "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Valores sorteados uma vez por execucao, para a collection ser reexecutavel",
+          "// sem resetar o banco.",
+          "if (!pm.collectionVariables.get('dupEmail')) {",
+          "    var carimbo = Date.now();",
+          "    pm.collectionVariables.set('dupEmail', 'qa-' + carimbo + '@sanguebom.test');",
+          "    pm.collectionVariables.set('dupCpfHash', 'hash_qa_' + carimbo);",
+          "    pm.collectionVariables.set('putMarker', 'QA_PUT_' + carimbo);",
+          "}"
+        ]
+      }
     }
   ]
 }
