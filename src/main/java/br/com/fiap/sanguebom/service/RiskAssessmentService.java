@@ -13,7 +13,7 @@ import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
-import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
+import br.com.fiap.sanguebom.rulesMotor.exam.RiskAssessmentClassifier;
 import br.com.fiap.sanguebom.util.DateRangeUtils;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
