@@ -4,6 +4,7 @@ import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.dtos.AppUserDTO;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.exception.UserAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -31,14 +32,47 @@ public class AppUserService {
     }
 
     public Long create(final AppUserDTO appUserDTO) {
+        validateUniqueness(appUserDTO, null);
+
         final AppUser appUser = new AppUser();
         mapToEntity(appUserDTO, appUser);
         return appUserRepository.save(appUser).getId();
     }
 
+    /**
+     * O cpf_hash e a unica identificacao do cidadao: permitir duplicatas fragmenta o historico
+     * clinico entre registros diferentes. No update, o proprio cidadao e excluido da checagem.
+     */
+    private void validateUniqueness(final AppUserDTO appUserDTO, final Long currentId) {
+        final String cpfHash = appUserDTO.getCpfHash();
+        if (cpfHash != null && cpfHashTaken(cpfHash, currentId)) {
+            throw new UserAlreadyExistsException("Já existe um cidadão cadastrado com este CPF");
+        }
+
+        final String email = appUserDTO.getEmail();
+        if (email != null && emailTaken(email, currentId)) {
+            throw new UserAlreadyExistsException(
+                    String.format("Já existe um cidadão cadastrado com o e-mail %s", email));
+        }
+    }
+
+    private boolean cpfHashTaken(final String cpfHash, final Long currentId) {
+        return currentId == null
+                ? appUserRepository.existsByCpfHash(cpfHash)
+                : appUserRepository.existsByCpfHashAndIdNot(cpfHash, currentId);
+    }
+
+    private boolean emailTaken(final String email, final Long currentId) {
+        return currentId == null
+                ? appUserRepository.existsByEmailIgnoreCase(email)
+                : appUserRepository.existsByEmailIgnoreCaseAndIdNot(email, currentId);
+    }
+
     public void update(final Long id, final AppUserDTO appUserDTO) {
         final AppUser appUser = appUserRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
+
+        validateUniqueness(appUserDTO, id);
         mapToEntity(appUserDTO, appUser);
         appUserRepository.save(appUser);
     }

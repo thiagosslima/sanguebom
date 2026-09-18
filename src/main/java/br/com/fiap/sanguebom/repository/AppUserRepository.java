@@ -10,4 +10,12 @@ import org.springframework.stereotype.Repository;
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     Page<AppUser> findByStatusIgnoreCase(String status, Pageable pageable);
+
+    boolean existsByCpfHash(String cpfHash);
+
+    boolean existsByCpfHashAndIdNot(String cpfHash, Long id);
+
+    boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
 }

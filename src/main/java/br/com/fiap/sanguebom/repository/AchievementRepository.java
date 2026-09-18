@@ -11,4 +11,8 @@ import java.util.Optional;
 public interface AchievementRepository extends JpaRepository<Achievement, Long> {
 
     Optional<Achievement> findByCode(AchivementCode code);
+
+    boolean existsByCode(AchivementCode code);
+
+    boolean existsByCodeAndIdNot(AchivementCode code, Long id);
 }
