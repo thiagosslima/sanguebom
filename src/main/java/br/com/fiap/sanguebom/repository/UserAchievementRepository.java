@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UserAchievementRepository extends JpaRepository<UserAchievement, Long> {
+
+    boolean existsByUserIdAndAchievementId(Long userId, Long achievementId);
+
+    boolean existsByUserIdAndAchievementIdAndIdNot(Long userId, Long achievementId, Long id);
 }

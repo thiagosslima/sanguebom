@@ -46,6 +46,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 /**
  * CF-332 - historico paginado do cidadao. CF-333 - detalhe do exame com o pre-diagnostico.
@@ -70,6 +71,9 @@ class UserExamServiceTest {
     @Mock
     private ExamResultRepository examResultRepository;
 
+    @Mock
+    private UserServiceHelper userServiceHelper;
+
     @Captor
     private ArgumentCaptor<Pageable> pageableCaptor;
 
@@ -81,7 +85,8 @@ class UserExamServiceTest {
         messageSource.addMessage("exam.medical-disclaimer", LOCALE, DISCLAIMER);
         // mapper real, para o mapeamento ser de fato exercitado
         service = new UserExamService(examRepository, examResultRepository,
-                Mappers.getMapper(UserExamMapper.class), new MessageService(messageSource));
+                Mappers.getMapper(UserExamMapper.class), new MessageService(messageSource),
+                userServiceHelper);
     }
 
     // ---------------------------------------------------------------- CF-332
@@ -137,6 +142,19 @@ class UserExamServiceTest {
         assertThat(response.content()).isEmpty();
         assertThat(response.totalElements()).isZero();
         assertThat(response.totalPages()).isZero();
+    }
+
+    @Test
+    @DisplayName("historico de cidadao inexistente falha com 404, e nao devolve pagina vazia")
+    void shouldFailWhenUserDoesNotExistOnHistory() {
+        given(userServiceHelper.getUserByIdOrFail(999L))
+                .willThrow(new NotFoundException("Usuário não encontrado para o id: 999"));
+
+        assertThatThrownBy(() -> service.history(999L, 0, 10))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("Usuário não encontrado para o id: 999");
+
+        then(examRepository).should(never()).findByUserId(anyLong(), any(Pageable.class));
     }
 
     // ---------------------------------------------------------------- CF-333

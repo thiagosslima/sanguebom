@@ -159,15 +159,7 @@ public class ExamService {
                 userServiceHelper.getUserByIdOrFail(examDTO.userId());
 
         HealthUnit healthUnit =
-                healthUnitRepository.findById(examDTO.healthUnitId())
-                        .orElseThrow(() ->
-                                new NotFoundException(
-                                        String.format(
-                                                "Unidade de saúde não encontrada para o id: %d",
-                                                examDTO.healthUnitId()
-                                        )
-                                )
-                        );
+                findHealthUnitOrFail(examDTO.healthUnitId());
 
         Map<Long, ExamItem> examItems =
                 loadExamItems(examDTO.analyzedItems());
@@ -270,10 +262,34 @@ public class ExamService {
     }
 
 
+    private HealthUnit findHealthUnitOrFail(final Long healthUnitId) {
+        return healthUnitRepository.findById(healthUnitId)
+                .orElseThrow(() ->
+                        new NotFoundException(
+                                String.format(
+                                        "Unidade de saúde não encontrada para o id: %d",
+                                        healthUnitId
+                                )
+                        )
+                );
+    }
+
     public void update(final Long id, final ExamRecoverDTO examRecoverDTO) {
-        examRepository.findById(id)
+        final Exam exam = examRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
-        Exam exam = examMapper.toEntity(examRecoverDTO);
+
+        examMapper.updateEntity(exam, examRecoverDTO);
+
+        // O DTO nao valida os ids, entao uma associacao so e trocada quando vem informada.
+        // Do contrario o exame manteria o vinculo que ja tem.
+        if (examRecoverDTO.getUserId() != null) {
+            exam.setUser(userServiceHelper.getUserByIdOrFail(examRecoverDTO.getUserId()));
+        }
+
+        if (examRecoverDTO.getHealthUnitId() != null) {
+            exam.setHealthUnit(findHealthUnitOrFail(examRecoverDTO.getHealthUnitId()));
+        }
+
         examRepository.save(exam);
     }
 

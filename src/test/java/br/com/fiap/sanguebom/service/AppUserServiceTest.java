@@ -1,6 +1,7 @@
 package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.exception.UserAlreadyExistsException;
 import br.com.fiap.sanguebom.model.dtos.AppUserDTO;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
@@ -144,5 +145,77 @@ class AppUserServiceTest {
                 .isInstanceOf(NotFoundException.class);
 
         verify(appUserRepository, never()).save(any());
+    }
+
+    // ------------------------------------------------------------------ unicidade
+    //
+    // O cpf_hash e a unica identificacao do cidadao: duplicatas fragmentam o historico
+    // clinico entre registros diferentes.
+
+    @Test
+    @DisplayName("create recusa um CPF ja cadastrado")
+    void createRejectsDuplicatedCpfHash() {
+        when(appUserRepository.existsByCpfHash("hash-xyz")).thenReturn(true);
+
+        assertThatThrownBy(() -> appUserService.create(dto()))
+                .isInstanceOf(UserAlreadyExistsException.class)
+                .hasMessageContaining("CPF");
+
+        verify(appUserRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create recusa um e-mail ja cadastrado")
+    void createRejectsDuplicatedEmail() {
+        when(appUserRepository.existsByCpfHash("hash-xyz")).thenReturn(false);
+        when(appUserRepository.existsByEmailIgnoreCase("joao@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> appUserService.create(dto()))
+                .isInstanceOf(UserAlreadyExistsException.class)
+                .hasMessageContaining("joao@example.com");
+
+        verify(appUserRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("update exclui o proprio cidadao da checagem de unicidade")
+    void updateIgnoresOwnIdentifiers() {
+        AppUser existing = entity();
+        when(appUserRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(appUserRepository.existsByCpfHashAndIdNot("hash-xyz", 1L)).thenReturn(false);
+        when(appUserRepository.existsByEmailIgnoreCaseAndIdNot("joao@example.com", 1L))
+                .thenReturn(false);
+
+        appUserService.update(1L, dto());
+
+        verify(appUserRepository).save(existing);
+    }
+
+    @Test
+    @DisplayName("update recusa o e-mail de outro cidadao")
+    void updateRejectsEmailOfAnotherCitizen() {
+        when(appUserRepository.findById(1L)).thenReturn(Optional.of(entity()));
+        when(appUserRepository.existsByCpfHashAndIdNot("hash-xyz", 1L)).thenReturn(false);
+        when(appUserRepository.existsByEmailIgnoreCaseAndIdNot("joao@example.com", 1L))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> appUserService.update(1L, dto()))
+                .isInstanceOf(UserAlreadyExistsException.class);
+
+        verify(appUserRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cidadao sem CPF e sem e-mail nao dispara checagem de unicidade")
+    void skipsUniquenessWhenIdentifiersAreAbsent() {
+        AppUserDTO semIdentificadores = dto();
+        semIdentificadores.setCpfHash(null);
+        semIdentificadores.setEmail(null);
+        when(appUserRepository.save(any(AppUser.class))).thenReturn(entity());
+
+        appUserService.create(semIdentificadores);
+
+        verify(appUserRepository, never()).existsByCpfHash(any());
+        verify(appUserRepository, never()).existsByEmailIgnoreCase(any());
     }
 }

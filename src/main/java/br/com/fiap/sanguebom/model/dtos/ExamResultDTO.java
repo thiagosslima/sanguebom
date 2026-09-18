@@ -29,7 +29,6 @@ public class ExamResultDTO {
     @Size(max = 50)
     private String unit;
 
-    @Size(max = 30)
     private ExamResultFlag flag;
 
     private OffsetDateTime createdAt;

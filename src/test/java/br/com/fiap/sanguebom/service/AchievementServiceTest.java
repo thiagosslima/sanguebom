@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.exception.DuplicatedAchievementException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.model.dtos.AchievementDTO;
 import br.com.fiap.sanguebom.model.entities.Achievement;
@@ -127,5 +128,71 @@ class AchievementServiceTest {
                 .isInstanceOf(NotFoundException.class);
 
         verify(achievementRepository, never()).save(any());
+    }
+
+    // ------------------------------------------------------------ unicidade do code
+    //
+    // Com duas linhas do mesmo code, o findByCode usado pelo motor de conquistas levanta
+    // IncorrectResultSizeDataAccessException e o POST /api/exams passa a responder 500.
+
+    @Test
+    @DisplayName("create recusa um code ja cadastrado")
+    void createRejectsDuplicatedCode() {
+        when(achievementRepository.existsByCode(AchivementCode.PUNCTUAL)).thenReturn(true);
+
+        assertThatThrownBy(() -> achievementService.create(dto()))
+                .isInstanceOf(DuplicatedAchievementException.class)
+                .hasMessageContaining("PUNCTUAL");
+
+        verify(achievementRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("update exclui a propria conquista da checagem de unicidade")
+    void updateIgnoresOwnCode() {
+        Achievement existing = entity();
+        when(achievementRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(achievementRepository.existsByCodeAndIdNot(AchivementCode.PUNCTUAL, 1L))
+                .thenReturn(false);
+
+        achievementService.update(1L, dto());
+
+        verify(achievementRepository).save(existing);
+    }
+
+    @Test
+    @DisplayName("update recusa o code de outra conquista")
+    void updateRejectsCodeOfAnotherAchievement() {
+        when(achievementRepository.findById(1L)).thenReturn(Optional.of(entity()));
+        when(achievementRepository.existsByCodeAndIdNot(AchivementCode.PUNCTUAL, 1L))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> achievementService.update(1L, dto()))
+                .isInstanceOf(DuplicatedAchievementException.class);
+
+        verify(achievementRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("conquista sem code nao dispara checagem de unicidade")
+    void skipsUniquenessWhenCodeIsAbsent() {
+        AchievementDTO semCode = dto();
+        semCode.setCode(null);
+        when(achievementRepository.save(any(Achievement.class))).thenReturn(entity());
+
+        achievementService.create(semCode);
+
+        verify(achievementRepository, never()).existsByCode(any());
+    }
+
+    @Test
+    @DisplayName("o conflito de code vira 422, com titulo proprio")
+    void duplicatedAchievementIsUnprocessableEntity() {
+        var problem = new DuplicatedAchievementException("Já existe uma conquista cadastrada")
+                .toProblemDetail();
+
+        assertThat(problem.getStatus()).isEqualTo(422);
+        assertThat(problem.getTitle()).isEqualTo("Conquista já cadastrada");
+        assertThat(problem.getDetail()).isEqualTo("Já existe uma conquista cadastrada");
     }
 }
