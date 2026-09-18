@@ -19,6 +19,8 @@ public enum ApplicationMessage {
     RISK_ASSESSMENT_MODERATE_EXPLANATION("risk-assessment.level.moderate.explanation"),
     RISK_ASSESSMENT_HIGH_EXPLANATION("risk-assessment.level.high.explanation"),
     RISK_ASSESSMENT_VERY_HIGH_EXPLANATION("risk-assessment.level.very-high.explanation"),
+    RISK_ASSESSMENT_PATIENT_NOT_FOUND("risk-assessment.patient-not-found"),
+    RISK_ASSESSMENT_INVALID_PERIOD("risk-assessment.invalid-period"),
     NOTIFICATION_EXAM_RESULT_AVAILABLE_TITLE("notification.exam-result-available.title"),
     NOTIFICATION_EXAM_RESULT_AVAILABLE_MESSAGE("notification.exam-result-available.message"),
     NOTIFICATION_EXAM_GOAL_DUE_SOON_TITLE("notification.exam-goal.due-soon.title"),

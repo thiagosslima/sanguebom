@@ -1,20 +1,33 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.entities.RiskAssessment;
-import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
+import br.com.fiap.sanguebom.model.enums.ApplicationMessage;
 import br.com.fiap.sanguebom.model.exam.ExamAnalysisScore;
 import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
+import br.com.fiap.sanguebom.model.riskAssessment.RiskTimelinePointDTO;
+import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
-import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.rulesMotor.exam.RiskAssessmentClassifier;
+import br.com.fiap.sanguebom.util.DateRangeUtils;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -23,10 +36,13 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class RiskAssessmentService {
 
+    private static final int NEXT_DAY_OFFSET = 1;
+
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final AppUserRepository appUserRepository;
     private final ExamRepository examRepository;
     private final RiskAssessmentClassifier riskAssessmentClassifier;
+    private final MessageService messageService;
 
     public RiskAssessment createRiskAssessment(
             Exam exam,
@@ -35,21 +51,14 @@ public class RiskAssessmentService {
     ) {
 
         RiskClassification classification =
-                riskAssessmentClassifier.classify(
-                        analysisResult.finalScore(),
-                        Locale.getDefault()
-                );
+                riskAssessmentClassifier.classify(analysisResult.finalScore(), Locale.getDefault());
 
-        RiskAssessment riskAssessment =
-                new RiskAssessment();
+        RiskAssessment riskAssessment = new RiskAssessment();
 
         riskAssessment.setExam(exam);
         riskAssessment.setUser(user);
 
-        riskAssessment.applyAssessment(
-                analysisResult.finalScore(),
-                classification
-        );
+        riskAssessment.applyAssessment(analysisResult.finalScore(), classification);
 
         return riskAssessment;
     }
@@ -65,6 +74,53 @@ public class RiskAssessmentService {
         return riskAssessmentRepository.findById(id)
                 .map(riskAssessment -> mapToDTO(riskAssessment, new RiskAssessmentDTO()))
                 .orElseThrow(NotFoundException::new);
+    }
+
+    public PageResponse<RiskTimelinePointDTO> findByUserId(final Long userId, final LocalDate from, final LocalDate to, final int page, final int size) {
+        validatePeriod(from, to);
+
+        appUserRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        messageService.getMessage(ApplicationMessage.RISK_ASSESSMENT_PATIENT_NOT_FOUND,
+                                userId)));
+
+        final OffsetDateTime fromAt = DateRangeUtils.startOfDayUtc(from);
+        final OffsetDateTime toExclusive = DateRangeUtils.startOfNextDayUtc(to);
+        final PageRequest pageRequest = PageRequest.of(page, size);
+
+        final Page<RiskTimelinePointDTO> points =
+                findTimelineResults(userId, fromAt, toExclusive, pageRequest)
+                        .map(this::toTimelinePoint);
+
+        return PageResponse.of(points);
+    }
+
+    private Page<RiskAssessment> findTimelineResults(final Long userId, final OffsetDateTime fromAt,
+                                                     final OffsetDateTime toExclusive, final PageRequest pageRequest) {
+        Specification<RiskAssessment> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("user").get("id"), userId));
+
+            if (fromAt != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), fromAt));
+            }
+            if (toExclusive != null) {
+                predicates.add(cb.lessThan(root.get("createdAt"), toExclusive));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return riskAssessmentRepository.findAll(spec, pageRequest);
+    }
+
+    private RiskTimelinePointDTO toTimelinePoint(final RiskAssessment result) {
+        return new RiskTimelinePointDTO(
+                result.getId(),
+                result.getExam().getId(),
+                result.getScore(),
+                result.getLevel(),
+                result.getCreatedAt());
     }
 
     public void update(final Long id, final RiskAssessmentDTO riskAssessmentDTO) {
@@ -101,5 +157,12 @@ public class RiskAssessmentService {
                 .orElseThrow(() -> new NotFoundException("exam not found"));
         riskAssessment.setExam(exam);
         return riskAssessment;
+    }
+
+    private void validatePeriod(final LocalDate from, final LocalDate to) {
+        if (DateRangeUtils.isInvalidPeriod(from, to)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    messageService.getMessage(ApplicationMessage.RISK_ASSESSMENT_INVALID_PERIOD));
+        }
     }
 }
