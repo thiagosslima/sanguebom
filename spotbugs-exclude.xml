@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Filtro de exclusao do SpotBugs.
+
+  EI_EXPOSE_REP / EI_EXPOSE_REP2 acusam que um getter/setter devolve ou guarda
+  a referencia de um objeto mutavel (Date, List, array). Em entidades JPA e
+  DTOs gerados pelo Lombok isso e o comportamento esperado e inevitavel, entao
+  esses dois padroes sao silenciados APENAS no pacote model.
+
+  O filtro e deliberadamente estreito: os mesmos padroes continuam sendo
+  reportados em controller, service, config e rulesMotor.
+-->
+<FindBugsFilter>
+    <Match>
+        <Package name="~br\.com\.fiap\.sanguebom\.model(\..*)?"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+</FindBugsFilter>

@@ -1,0 +1,173 @@
+name: Coverage
+
+# Gate de 80% de cobertura nas LINHAS NOVAS do PR (nao no projeto inteiro).
+# A cobertura global hoje e ~57%, entao um gate global travaria todo PR.
+on:
+  workflow_call:
+    inputs:
+      reuse-artifact:
+        description: Baixar o jacoco-report do job de testes em vez de rodar mvn de novo
+        type: boolean
+        default: false
+      base-ref:
+        description: Branch de comparacao para o diff
+        type: string
+        default: ''
+      min-coverage:
+        description: Percentual minimo exigido nas linhas novas
+        type: number
+        default: 80
+  # Atencao: workflow_dispatch nao aceita `type: number`, so string/boolean/choice.
+  workflow_dispatch:
+    inputs:
+      base-ref:
+        description: Branch de comparacao para o diff (vazio = branch padrao do repo)
+        type: string
+        default: ''
+      min-coverage:
+        description: Percentual minimo exigido nas linhas novas
+        type: string
+        default: '80'
+
+concurrency:
+  group: coverage-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  coverage:
+    name: Cobertura do diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # O service fica sempre declarado (YAML nao permite services condicionais).
+    # Custa poucos segundos e so e usado quando rodamos o mvn aqui.
+    services:
+      postgres:
+        image: postgres:18.4
+        env:
+          POSTGRES_DB: sanguebom
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: sanguebom
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      SPRING_DOCKER_COMPOSE_ENABLED: false
+      MIN_COVERAGE: ${{ inputs.min-coverage || 80 }}
+
+    steps:
+      # fetch-depth: 0 e obrigatorio -- o diff-cover precisa do historico
+      # para comparar com a branch base.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolver branch base
+        id: base
+        run: |
+          REF="${{ inputs.base-ref }}"
+          if [ -z "$REF" ]; then
+            REF="${{ github.event.pull_request.base.ref }}"
+          fi
+          if [ -z "$REF" ]; then
+            REF="${{ github.event.repository.default_branch }}"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Comparando com origin/$REF"
+
+      # checkout com fetch-depth: 0 ja traz tudo, mas garantimos que a ref
+      # remota exista mesmo se a branch base tiver avancado.
+      - name: Buscar branch base
+        run: |
+          REF="${{ steps.base.outputs.ref }}"
+          git fetch --no-tags origin "+refs/heads/$REF:refs/remotes/origin/$REF"
+
+      - name: Configurar JDK 21
+        if: ${{ !inputs.reuse-artifact }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: mvn verify (gerar jacoco.xml)
+        if: ${{ !inputs.reuse-artifact }}
+        run: mvn -B --no-transfer-progress verify
+
+      - name: Baixar jacoco.xml do job de testes
+        if: ${{ inputs.reuse-artifact }}
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar diff-cover
+        run: pip install --disable-pip-version-check diff-cover==10.5.1
+
+      # diff-cover mede cobertura LINHA A LINHA no diff. Acoes do tipo
+      # "changed files" medem o arquivo inteiro, o que nao e o pedido aqui.
+      - name: Gate de cobertura nas linhas novas
+        id: gate
+        run: |
+          set -o pipefail
+          diff-cover target/site/jacoco/jacoco.xml \
+            --compare-branch "origin/${{ steps.base.outputs.ref }}" \
+            --src-roots src/main/java \
+            --fail-under "$MIN_COVERAGE" \
+            --markdown-report coverage-diff.md \
+            --html-report coverage-diff.html \
+            --json-report coverage-diff.json | tee diff-cover.out
+
+      # Monta um relatorio unico com as duas medidas: a do PR (bloqueante)
+      # e a do projeto (informativa), mais o link do code scanning.
+      - name: Montar relatorio
+        if: always()
+        run: |
+          python3 .github/scripts/coverage_comment.py \
+            --jacoco target/site/jacoco/jacoco.xml \
+            --diff-json coverage-diff.json \
+            --min-coverage "$MIN_COVERAGE" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pr "${{ github.event.pull_request.number || '' }}" \
+            --base-ref "${{ steps.base.outputs.ref }}" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            > coverage-comment.md
+          cat coverage-comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comentar no PR
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: bash .github/scripts/sticky_comment.sh coverage coverage-comment.md
+
+      - name: Guardar relatorio HTML do diff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-diff
+          path: |
+            coverage-diff.html
+            coverage-diff.md
+            coverage-diff.json
+          retention-days: 7
+          if-no-files-found: ignore
