@@ -38,7 +38,7 @@ public class RiskAssessmentResource {
         return ResponseEntity.ok(riskAssessmentService.get(id));
     }
 
-    @GetMapping("/timeline")
+    @GetMapping("/timeline/{userId}")
     @Operation(summary = "Evolução temporal de um risco do paciente",
             description = "Retorna uma página da série histórica de um risco do paciente, "
                     + "com a pontuação e a classificação em cada data.")

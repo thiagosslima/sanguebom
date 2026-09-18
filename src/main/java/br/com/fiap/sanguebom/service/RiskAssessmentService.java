@@ -5,6 +5,7 @@ import br.com.fiap.sanguebom.model.dtos.RiskAssessmentDTO;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.entities.RiskAssessment;
+import br.com.fiap.sanguebom.model.enums.ApplicationMessage;
 import br.com.fiap.sanguebom.model.exam.ExamAnalysisScore;
 import br.com.fiap.sanguebom.model.riskAssessment.RiskClassification;
 import br.com.fiap.sanguebom.model.riskAssessment.RiskTimelinePointDTO;
@@ -26,7 +27,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +42,7 @@ public class RiskAssessmentService {
     private final AppUserRepository appUserRepository;
     private final ExamRepository examRepository;
     private final RiskAssessmentClassifier riskAssessmentClassifier;
+    private final MessageService messageService;
 
     public RiskAssessment createRiskAssessment(
             Exam exam,
@@ -50,21 +51,14 @@ public class RiskAssessmentService {
     ) {
 
         RiskClassification classification =
-                riskAssessmentClassifier.classify(
-                        analysisResult.finalScore(),
-                        Locale.getDefault()
-                );
+                riskAssessmentClassifier.classify(analysisResult.finalScore(), Locale.getDefault());
 
-        RiskAssessment riskAssessment =
-                new RiskAssessment();
+        RiskAssessment riskAssessment = new RiskAssessment();
 
         riskAssessment.setExam(exam);
         riskAssessment.setUser(user);
 
-        riskAssessment.applyAssessment(
-                analysisResult.finalScore(),
-                classification
-        );
+        riskAssessment.applyAssessment(analysisResult.finalScore(), classification);
 
         return riskAssessment;
     }
@@ -85,9 +79,10 @@ public class RiskAssessmentService {
     public PageResponse<RiskTimelinePointDTO> findByUserId(final Long userId, final LocalDate from, final LocalDate to, final int page, final int size) {
         validatePeriod(from, to);
 
-        // TODO: Implementar ApplicationMessages depois do merge da PR #12
         appUserRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Paciente não encontrado: {0}".formatted(userId)));
+                .orElseThrow(() -> new NotFoundException(
+                        messageService.getMessage(ApplicationMessage.RISK_ASSESSMENT_PATIENT_NOT_FOUND,
+                                userId)));
 
         final OffsetDateTime fromAt = DateRangeUtils.startOfDayUtc(from);
         final OffsetDateTime toExclusive = DateRangeUtils.startOfNextDayUtc(to);
@@ -125,8 +120,7 @@ public class RiskAssessmentService {
                 result.getExam().getId(),
                 result.getScore(),
                 result.getLevel(),
-                result.getCreatedAt()
-        );
+                result.getCreatedAt());
     }
 
     public void update(final Long id, final RiskAssessmentDTO riskAssessmentDTO) {
@@ -166,9 +160,9 @@ public class RiskAssessmentService {
     }
 
     private void validatePeriod(final LocalDate from, final LocalDate to) {
-        if (if (DateRangeUtils.isInvalidPeriod(from, to)) {
-            // TODO: Colocar em uma classe útil para reuso em outros métodos
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O período inicial não pode ser maior que o período final.");
+        if (DateRangeUtils.isInvalidPeriod(from, to)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    messageService.getMessage(ApplicationMessage.RISK_ASSESSMENT_INVALID_PERIOD));
         }
     }
 }
