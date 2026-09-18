@@ -13,7 +13,7 @@ import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.ExamRepository;
 import br.com.fiap.sanguebom.repository.RiskAssessmentRepository;
-import br.com.fiap.sanguebom.rulesMotor.RiskAssessmentClassifier;
+import br.com.fiap.sanguebom.rulesMotor.exam.RiskAssessmentClassifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
