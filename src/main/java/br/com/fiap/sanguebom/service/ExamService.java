@@ -11,7 +11,8 @@ import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import br.com.fiap.sanguebom.repository.*;
-import br.com.fiap.sanguebom.rulesMotor.ExamAnalysisService;
+import br.com.fiap.sanguebom.rulesMotor.achievement.AchievementEvaluator;
+import br.com.fiap.sanguebom.rulesMotor.exam.ExamAnalysisService;
 import br.com.fiap.sanguebom.service.notification.ExamNotificationService;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class ExamService {
     private final RiskAssessmentService riskAssessmentService;
     private final ExamAnalysisService examAnalysisService;
     private final ExamAnalysisResultMapper examAnalysisResultMapper;
+    private final AchievementEvaluator achievementEvaluator;
     private final ExamNotificationService examNotificationService;
     private final Clock clock;
 
@@ -55,6 +57,7 @@ public class ExamService {
                        final RiskAssessmentRepository riskAssessmentRepository,
                        final RiskAssessmentService riskAssessmentService,
                        final ExamAnalysisService examAnalysisService,
+                       final AchievementEvaluator achievementEvaluator,
                        final ExamIResultMapper examIResultMapper,
                        final ExamAnalysisResultMapper examAnalysisResultMapper,
                        final ExamNotificationService examNotificationService,
@@ -73,6 +76,7 @@ public class ExamService {
         this.riskAssessmentService = riskAssessmentService;
         this.examAnalysisService = examAnalysisService;
         this.examAnalysisResultMapper = examAnalysisResultMapper;
+        this.achievementEvaluator = achievementEvaluator;
         this.examNotificationService = examNotificationService;
         this.clock = clock;
     }
@@ -105,6 +109,8 @@ public class ExamService {
                 context.examItems()
         );
 
+        examInAnalysis(exam);
+
         ExamAnalysisScore analysisResult =
                 examAnalysisService.analyze(
                         exam,
@@ -121,10 +127,25 @@ public class ExamService {
 
         RiskAssessment savedRA = riskAssessmentRepository.save(riskAssessment);
 
+        finishExamAnalysis(exam);
+
         examNotificationService.notifyResultAvailable(exam);
+
+        achievementEvaluator.evaluate(context.user(), exam, riskAssessment);
 
         return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
 
+    }
+
+    private void finishExamAnalysis(Exam exam) {
+        exam.setStatus(ExamStatus.RELEASED);
+        exam.setReleasedAt(OffsetDateTime.now(clock));
+        examRepository.save(exam);
+    }
+
+    private void examInAnalysis(Exam exam) {
+        exam.setStatus(ExamStatus.IN_ANALYSIS);
+        examRepository.save(exam);
     }
 
     private void validateExamResults(List<ExamResultDTO> examResults) {
@@ -192,8 +213,7 @@ public class ExamService {
 
         Exam exam = examMapper.toEntity(examDTO);
 
-        exam.setStatus(ExamStatus.RELEASED);
-        exam.setReleasedAt(OffsetDateTime.now(clock));
+        exam.setStatus(ExamStatus.COLLECTED);
         exam.setUser(context.user());
         exam.setHealthUnit(context.healthUnit());
 

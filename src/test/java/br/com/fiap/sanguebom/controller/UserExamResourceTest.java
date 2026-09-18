@@ -6,6 +6,7 @@ import br.com.fiap.sanguebom.model.entities.Exam;
 import br.com.fiap.sanguebom.model.entities.ExamItem;
 import br.com.fiap.sanguebom.model.entities.ExamResult;
 import br.com.fiap.sanguebom.model.entities.HealthProfile;
+import br.com.fiap.sanguebom.model.enums.ExamPeriodicity;
 import br.com.fiap.sanguebom.model.entities.HealthUnit;
 import br.com.fiap.sanguebom.model.entities.RiskAssessment;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
@@ -128,7 +129,7 @@ class UserExamResourceTest {
     @DisplayName("GET exam-goal devolve 200 com ultimo exame, vencimento, dias restantes e situacao")
     void shouldReturnExamGoal() throws Exception {
         givenUserExists();
-        givenProfile("SEMESTERLY");
+        givenProfile(ExamPeriodicity.SEMESTERLY);
         givenLastExamCollectedAt(COLLECTED_AT);
 
         mockMvc.perform(get("/api/users/{userId}/exam-goal", USER_ID))
@@ -144,7 +145,7 @@ class UserExamResourceTest {
     @DisplayName("GET exam-goal sem exame nenhum devolve NO_HISTORY com datas nulas")
     void shouldReturnNoHistory() throws Exception {
         givenUserExists();
-        givenProfile("YEARLY");
+        givenProfile(ExamPeriodicity.YEARLY);
         given(examRepository.findFirstByUserIdOrderByCollectedAtDesc(USER_ID)).willReturn(Optional.empty());
 
         mockMvc.perform(get("/api/users/{userId}/exam-goal", USER_ID))
@@ -333,7 +334,7 @@ class UserExamResourceTest {
         given(appUserRepository.findById(USER_ID)).willReturn(Optional.of(user));
     }
 
-    private void givenProfile(final String periodicity) {
+    private void givenProfile(final ExamPeriodicity periodicity) {
         HealthProfile profile = new HealthProfile();
         profile.setExamPeriodicity(periodicity);
         given(healthProfileRepository.findByUserId(USER_ID)).willReturn(Optional.of(profile));

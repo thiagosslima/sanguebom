@@ -38,7 +38,9 @@ public class ExamGoalService {
         userServiceHelper.getUserByIdOrFail(userId);
 
         final HealthProfile profile = healthProfileService.getByUserId(userId);
-        final ExamPeriodicity periodicity = ExamPeriodicity.from(profile.getExamPeriodicity());
+        final ExamPeriodicity periodicity = profile.getExamPeriodicity() == null
+                ? ExamPeriodicity.YEARLY
+                : profile.getExamPeriodicity();
 
         final LocalDate lastExamDate = examRepository.findFirstByUserIdOrderByCollectedAtDesc(userId)
                 .map(Exam::getCollectedAt)
