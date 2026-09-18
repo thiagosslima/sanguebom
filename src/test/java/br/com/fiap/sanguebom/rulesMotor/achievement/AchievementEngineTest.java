@@ -78,8 +78,10 @@ class AchievementEngineTest {
         UserAchievement saved = captor.getValue();
         assertThat(saved.getUser()).isSameAs(user);
         assertThat(saved.getAchievement().getCode()).isEqualTo(AchivementCode.SANGUE_BOM);
-        assertThat(saved.getId().getUserId()).isEqualTo(USER_ID);
-        assertThat(saved.getId().getAchievementId()).isEqualTo(ACHIEVEMENT_ID);
+        // A chave e gerada pela sequence no persist, entao o motor nao a preenche.
+        assertThat(saved.getId()).isNull();
+        assertThat(saved.getUser().getId()).isEqualTo(USER_ID);
+        assertThat(saved.getAchievement().getId()).isEqualTo(ACHIEVEMENT_ID);
     }
 
     @Test

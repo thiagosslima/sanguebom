@@ -7,6 +7,7 @@ import br.com.fiap.sanguebom.model.dtos.UserAchievementDTO;
 import br.com.fiap.sanguebom.repository.AchievementRepository;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.UserAchievementRepository;
+import br.com.fiap.sanguebom.exception.DuplicatedAchievementException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -37,21 +38,49 @@ public class UserAchievementService {
     }
 
     public Long create(final UserAchievementDTO userAchievementDTO) {
+        validateNotAlreadyGranted(userAchievementDTO, null);
+
         final UserAchievement userAchievement = new UserAchievement();
         mapToEntity(userAchievementDTO, userAchievement);
-        return userAchievementRepository.save(userAchievement).getId().getAchievementId();
+        return userAchievementRepository.save(userAchievement).getId();
     }
 
     public void update(final Long id, final UserAchievementDTO userAchievementDTO) {
         final UserAchievement userAchievement = userAchievementRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
+
+        validateNotAlreadyGranted(userAchievementDTO, id);
+
         mapToEntity(userAchievementDTO, userAchievement);
         userAchievementRepository.save(userAchievement);
     }
 
+    /**
+     * O par (user, achievement) e unico: cada cidadao ganha cada conquista uma unica vez. Sem esta
+     * checagem, a tentativa esbarraria na constraint do banco e viraria um 500.
+     */
+    private void validateNotAlreadyGranted(final UserAchievementDTO userAchievementDTO,
+                                           final Long currentId) {
+        final Long userId = userAchievementDTO.getUser();
+        final Long achievementId = userAchievementDTO.getAchievement();
+        if (userId == null || achievementId == null) {
+            return;
+        }
+
+        final boolean granted = currentId == null
+                ? userAchievementRepository.existsByUserIdAndAchievementId(userId, achievementId)
+                : userAchievementRepository.existsByUserIdAndAchievementIdAndIdNot(
+                        userId, achievementId, currentId);
+
+        if (granted) {
+            throw new DuplicatedAchievementException(
+                    String.format("O cidadão %d já possui a conquista %d", userId, achievementId));
+        }
+    }
+
     private UserAchievementDTO mapToDTO(final UserAchievement userAchievement,
                                         final UserAchievementDTO userAchievementDTO) {
-        userAchievementDTO.setId(userAchievement.getId().getAchievementId());
+        userAchievementDTO.setId(userAchievement.getId());
         userAchievementDTO.setEarnedAt(userAchievement.getEarnedAt());
         userAchievementDTO.setUser(userAchievement.getUser() == null ? null : userAchievement.getUser().getId());
         userAchievementDTO.setAchievement(userAchievement.getAchievement() == null ? null : userAchievement.getAchievement().getId());

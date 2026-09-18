@@ -48,7 +48,6 @@ public class AchievementEngine implements AchievementEvaluator {
         Achievement achievement = findAchievementOrFail(rule);
 
         UserAchievement userAchievement = new UserAchievement();
-        userAchievement.setId(new UserAchievementId(user.getId(), achievement.getId()));
         userAchievement.setAchievement(achievement);
         userAchievement.setUser(user);
         userAchievementRepository.save(userAchievement);

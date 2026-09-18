@@ -1,11 +1,11 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.exception.DuplicatedAchievementException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.model.dtos.UserAchievementDTO;
 import br.com.fiap.sanguebom.model.entities.Achievement;
 import br.com.fiap.sanguebom.model.entities.AppUser;
 import br.com.fiap.sanguebom.model.entities.UserAchievement;
-import br.com.fiap.sanguebom.model.entities.UserAchievementId;
 import br.com.fiap.sanguebom.repository.AchievementRepository;
 import br.com.fiap.sanguebom.repository.AppUserRepository;
 import br.com.fiap.sanguebom.repository.UserAchievementRepository;
@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class UserAchievementServiceTest {
 
+    private static final long ID = 77L;
     private static final long USER_ID = 5L;
     private static final long ACHIEVEMENT_ID = 9L;
     private static final OffsetDateTime EARNED_AT =
@@ -64,7 +65,7 @@ class UserAchievementServiceTest {
 
     private UserAchievement entity() {
         UserAchievement ua = new UserAchievement();
-        ua.setId(new UserAchievementId(USER_ID, ACHIEVEMENT_ID));
+        ua.setId(ID);
         ua.setEarnedAt(EARNED_AT);
         ua.setUser(user());
         ua.setAchievement(achievement());
@@ -80,12 +81,12 @@ class UserAchievementServiceTest {
     }
 
     @Test
-    @DisplayName("findAll expõe a parte de conquista da chave composta como id do DTO")
-    void findAllMapsCompositeKey() {
+    @DisplayName("findAll expõe a chave propria do vinculo como id do DTO, e nao a da conquista")
+    void findAllExposesOwnId() {
         when(userAchievementRepository.findAll(Sort.by("id"))).thenReturn(List.of(entity()));
 
         assertThat(userAchievementService.findAll()).singleElement().satisfies(d -> {
-            assertThat(d.getId()).isEqualTo(ACHIEVEMENT_ID);
+            assertThat(d.getId()).isEqualTo(ID);
             assertThat(d.getEarnedAt()).isEqualTo(EARNED_AT);
             assertThat(d.getUser()).isEqualTo(USER_ID);
             assertThat(d.getAchievement()).isEqualTo(ACHIEVEMENT_ID);
@@ -117,7 +118,7 @@ class UserAchievementServiceTest {
     }
 
     @Test
-    @DisplayName("create resolve usuário e conquista e devolve o id da conquista salva")
+    @DisplayName("create resolve usuário e conquista e devolve o id do vinculo salvo")
     void createResolvesBothRelations() {
         when(appUserRepository.findById(USER_ID)).thenReturn(Optional.of(user()));
         when(achievementRepository.findById(ACHIEVEMENT_ID)).thenReturn(Optional.of(achievement()));
@@ -128,7 +129,7 @@ class UserAchievementServiceTest {
         ArgumentCaptor<UserAchievement> captor = ArgumentCaptor.forClass(UserAchievement.class);
         verify(userAchievementRepository).save(captor.capture());
 
-        assertThat(id).isEqualTo(ACHIEVEMENT_ID);
+        assertThat(id).isEqualTo(ID);
         assertThat(captor.getValue().getUser().getId()).isEqualTo(USER_ID);
         assertThat(captor.getValue().getAchievement().getId()).isEqualTo(ACHIEVEMENT_ID);
         assertThat(captor.getValue().getEarnedAt()).isEqualTo(EARNED_AT);
@@ -160,6 +161,18 @@ class UserAchievementServiceTest {
     }
 
     @Test
+    @DisplayName("create recusa conceder a mesma conquista duas vezes ao mesmo cidadão")
+    void createRejectsDuplicateGrant() {
+        when(userAchievementRepository.existsByUserIdAndAchievementId(USER_ID, ACHIEVEMENT_ID))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> userAchievementService.create(dto(USER_ID, ACHIEVEMENT_ID)))
+                .isInstanceOf(DuplicatedAchievementException.class);
+
+        verify(userAchievementRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("update aplica o DTO sobre o vínculo existente")
     void updateMutatesExisting() {
         UserAchievement existing = entity();
@@ -185,5 +198,17 @@ class UserAchievementServiceTest {
                 .isInstanceOf(NotFoundException.class);
 
         verify(userAchievementRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("vinculo sem cidadão ou sem conquista não dispara checagem de duplicidade")
+    void skipsDuplicateCheckWhenRelationsAreAbsent() {
+        UserAchievementDTO semConquista = dto(USER_ID, null);
+
+        assertThatThrownBy(() -> userAchievementService.create(semConquista))
+                .isInstanceOf(NotFoundException.class);
+
+        verify(userAchievementRepository, never())
+                .existsByUserIdAndAchievementId(any(), any());
     }
 }
