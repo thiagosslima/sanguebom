@@ -7,6 +7,10 @@ services:
       - POSTGRES_DB=${DB_NAME}
     ports:
       - "${DB_PORT}:5432"
+    volumes:
+      # PGDATA no postgres 18 e /var/lib/postgresql/18/docker, entao o volume
+      # nomeado precisa cobrir /var/lib/postgresql (e nao .../data).
+      - postgres-data:/var/lib/postgresql
     networks:
       - sanguebom-network
     healthcheck:
@@ -43,3 +47,6 @@ services:
 networks:
   sanguebom-network:
     driver: bridge
+
+volumes:
+  postgres-data:

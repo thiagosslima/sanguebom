@@ -67,6 +67,72 @@ DB_PASSWORD=
 DB_NAME=sanguebom
 ```
 
+## ⚡ Subindo com um comando
+
+O jeito mais rápido de levantar o ambiente é usar o script de inicialização:
+
+```bash
+./scripts/start.sh
+```
+
+Ele abre um menu com três opções:
+
+```text
+1) Subir com banco LIMPO  (apaga tudo e reaplica as migrations)
+2) Subir normalmente      (mantem os dados existentes)
+3) Parar o ambiente
+```
+
+A opção **1** remove o volume do PostgreSQL e sobe tudo do zero, deixando o Flyway reconstruir
+schema e seeds. A opção **2** mantém os dados que já estão lá. A opção **3** para os containers
+sem apagar nada.
+
+Para uso não interativo (CI, scripts):
+
+```bash
+./scripts/start.sh --clean --yes   # banco limpo, sem confirmação
+./scripts/start.sh --keep          # mantém os dados
+./scripts/start.sh --down          # para o ambiente
+```
+
+O script verifica o Docker, cria um `.env` padrão se não existir, espera o PostgreSQL ficar
+saudável e a aplicação responder, e mostra os logs do container se algo falhar na subida.
+
+## 🧪 Testes de API (Postman + Newman)
+
+A pasta `postman/` traz uma collection que cobre os 59 endpoints do projeto, em casos de sucesso
+e de falha. Para executar:
+
+```bash
+./scripts/api-test.sh
+```
+
+Por padrão o script **recria o ambiente do zero** antes de rodar, o que torna a execução
+reproduzível. Para rodar contra o ambiente que já estiver de pé:
+
+```bash
+./scripts/api-test.sh --keep
+```
+
+A collection também pode ser importada direto no Postman:
+
+* `postman/sanguebom.postman_collection.json`
+* `postman/sanguebom.local.postman_environment.json`
+
+### Lendo o resultado
+
+As pastas `00` a `09` devem passar **100%**. A pasta `10 - Bugs conhecidos` **falha de propósito**:
+cada asserção dela descreve o comportamento correto de um bug em aberto e continuará vermelha até
+o bug ser corrigido. O relatório completo, com causa e correção sugerida de cada um, está em
+[`postman/RELATORIO.md`](postman/RELATORIO.md).
+
+A pasta `99 - SSE (manual)` fica fora da execução automatizada, porque o stream de notificações
+mantém a conexão aberta por 30 minutos.
+
+> **Atenção:** a API não possui autenticação. Não há Spring Security, JWT nem verificação de
+> perfil no código — os 59 endpoints são abertos. A seção [🔐 Segurança](#-segurança) descreve um
+> design que ainda não foi implementado.
+
 ## 🐳 Subindo o projeto com Docker Compose
 
 Com o Docker em execução, na raiz do projeto execute:
