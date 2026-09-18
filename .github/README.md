@@ -80,11 +80,30 @@ Para endurecer depois de zerar o backlog:
    `spotbugs-maven-plugin`.
 2. Adicionar os checks às *branch protection rules* de `develop` e `main`.
 
-O arquivo `spotbugs-exclude.xml` silencia `EI_EXPOSE_REP`/`EI_EXPOSE_REP2`
-**apenas** no pacote `model`: em entidades JPA e DTOs do Lombok, devolver a
-referência de um `List`/`Date` é o comportamento esperado. Nos demais pacotes
-(`controller`, `service`, `config`, `rulesMotor`) os dois padrões continuam
-sendo reportados. Isso reduz o ruído de 34 para 12 achados.
+### O filtro de exclusão
+
+`spotbugs-exclude.xml` silencia `EI_EXPOSE_REP`/`EI_EXPOSE_REP2` em três
+situações, todas estruturais de uma aplicação Spring com JPA e sem correção
+legítima em código:
+
+1. Pacote `model` — entidades JPA e DTOs do Lombok. Devolver a referência de
+   um `List`/`Date` de uma entidade é o comportamento esperado; copiar quebra
+   a identidade da entidade e o lazy loading.
+2. Construtores (`<init>`) — guardar a referência do colaborador recebido é
+   exatamente o padrão de injeção de dependência. A exclusão é restrita a
+   `<init>`, então exposição via **setter** continua sendo reportada.
+3. `AchievementContext` — record que carrega entidades JPA entre o motor de
+   regras e as regras, cujos accessors devolvem as entidades de propósito.
+
+Tudo o mais do SpotBugs segue ativo. O que fica invisível é, hoje, apenas
+essas duas regras nesses três contextos; se um dia uma classe passar a
+guardar um `byte[]` ou `Date` recebido no construtor, vale rever o item 2.
+
+⚠️ **O SpotBugs não falha quando não consegue ler o filtro**: ele registra o
+erro e segue a análise *sem exclusão nenhuma*. Um `--` dentro de um comentário
+XML já foi suficiente para isso acontecer neste projeto, e a contagem de
+achados subiu sem nada quebrar. Por isso o workflow valida o XML antes de
+rodar e falha se encontrar `Unable to read filter` na saída.
 
 O SpotBugs emite caminhos relativos ao *source root*; o workflow prefixa
 `src/main/java/` no SARIF para o GitHub conseguir ligar o alerta à linha.

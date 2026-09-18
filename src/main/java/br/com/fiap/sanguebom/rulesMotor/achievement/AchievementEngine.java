@@ -18,7 +18,9 @@ public class AchievementEngine implements AchievementEvaluator {
     public AchievementEngine(final List<AchievementRule> achievementRules,
                              final AchievementRepository achievementRepository,
                              final UserAchievementRepository userAchievementRepository) {
-        this.achievementRules = achievementRules;
+        // Copia imutavel: o motor nao deve mudar de comportamento se a lista
+        // injetada for alterada depois da construcao.
+        this.achievementRules = List.copyOf(achievementRules);
         this.achievementRepository = achievementRepository;
         this.userAchievementRepository = userAchievementRepository;
     }

@@ -1,6 +1,8 @@
 package br.com.fiap.sanguebom.exception;
 
+import br.com.fiap.sanguebom.controller.AchievementResource;
 import br.com.fiap.sanguebom.exception.dto.InvalidParamDto;
+import br.com.fiap.sanguebom.model.dtos.AchievementDTO;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Path;
@@ -86,8 +88,10 @@ class GlobalExceptionHandlerTest {
         binding.addError(new FieldError("achievementDTO", "name", "não deve estar em branco"));
         binding.addError(new FieldError("achievementDTO", "code", "não deve ser nulo"));
 
+        // Um método real de controller, em vez de um dummy: é exatamente o
+        // tipo de parâmetro que o Spring reporta quando @Valid falha.
         MethodParameter parameter = new MethodParameter(
-                GlobalExceptionHandlerTest.class.getDeclaredMethod("dummyForParameter", String.class), 0);
+                AchievementResource.class.getDeclaredMethod("createAchievement", AchievementDTO.class), 0);
 
         ProblemDetail detail = handler.handleMethodArgumentNotValidException(
                 new MethodArgumentNotValidException(parameter, binding));
@@ -150,11 +154,5 @@ class GlobalExceptionHandlerTest {
             assertThat(p.field()).isEqualTo("id");
             assertThat(p.reason()).isEqualTo("Valor inválido para o parâmetro");
         });
-    }
-
-    @SuppressWarnings("unused")
-    private void dummyForParameter(String body) {
-        // Existe apenas para fornecer um MethodParameter real ao
-        // MethodArgumentNotValidException, que exige um.
     }
 }

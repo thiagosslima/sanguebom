@@ -68,10 +68,24 @@ jobs:
           java-version: '21'
           cache: maven
 
+      # Um filtro de exclusao malformado faz o SpotBugs registrar o erro e
+      # seguir SEM filtro nenhum, sem quebrar o build. Validar antes evita
+      # que um typo passe despercebido e mude o resultado da analise.
+      - name: Validar o filtro de exclusao
+        run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('spotbugs-exclude.xml')"
+
       # failOnError=false no pom: os achados viram alertas no Security tab,
       # nao bloqueiam o merge. Ver .github/README.md para como endurecer depois.
       - name: Rodar SpotBugs
-        run: mvn -B --no-transfer-progress -DskipTests compile spotbugs:spotbugs
+        run: |
+          set -o pipefail
+          mvn -B --no-transfer-progress -DskipTests compile spotbugs:spotbugs | tee spotbugs-run.log
+          # O SpotBugs nao falha quando nao consegue ler o filtro; sem esta
+          # checagem, a analise rodaria sem exclusoes e ninguem perceberia.
+          if grep -q "Unable to read filter" spotbugs-run.log; then
+            echo "::error::SpotBugs nao conseguiu ler spotbugs-exclude.xml; a analise rodou sem filtro."
+            exit 1
+          fi
 
       # O SpotBugs emite URIs relativas ao source root (br/com/fiap/...).
       # O code scanning precisa de caminhos relativos ao repositorio para
