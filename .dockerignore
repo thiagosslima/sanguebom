@@ -1,0 +1,11 @@
+.git
+.agents
+.codex
+.env
+.env.*
+target
+frontend
+node_modules
+postman
+artifacts
+*.log

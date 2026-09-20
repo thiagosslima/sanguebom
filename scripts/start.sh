@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Sobe o ambiente do Sangue Bom (PostgreSQL + aplicacao) via Docker Compose.
+# Sobe o ambiente do Sangue Bom (PostgreSQL + API + frontend) via Docker Compose.
 #
-#   ./scripts/start.sh            menu interativo
+#   ./scripts/start.sh            sobe mantendo os dados
+#   ./scripts/start.sh --menu     menu interativo
 #   ./scripts/start.sh --clean    apaga o banco e sobe do zero
 #   ./scripts/start.sh --keep     sobe mantendo os dados
 #   ./scripts/start.sh --down     para o ambiente (preserva os dados)
@@ -12,10 +13,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
-
-APP_URL="http://localhost:8080"
-DB_WAIT_SECONDS=60
-APP_WAIT_SECONDS=300
 
 RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[0;33m'; BLUE=$'\033[0;34m'; BOLD=$'\033[1m'; NC=$'\033[0m'
 
@@ -28,13 +25,14 @@ usage() {
     cat <<'USAGE'
 Uso: ./scripts/start.sh [opcao]
 
+  --menu     Abre o menu interativo.
   --clean    Sobe com o banco LIMPO: remove o volume e reaplica as migrations.
   --keep     Sobe normalmente, mantendo os dados existentes.
   --down     Para o ambiente. Os dados sao preservados no volume postgres-data.
   --yes      Nao pede confirmacao (use junto de --clean em automacao).
   --help     Mostra esta mensagem.
 
-Sem opcao, o script abre um menu interativo.
+Sem opcao, sobe banco, API e frontend mantendo os dados.
 USAGE
 }
 
@@ -49,98 +47,38 @@ require_docker() {
         || fail "O plugin 'docker compose' nao esta disponivel. Instale o Docker Compose v2."
 }
 
-# O compose usa .env de duas formas: env_file nos dois servicos e interpolacao
-# de ${DB_PORT}/${DB_USERNAME}/... no proprio YAML. Sem o arquivo, o up quebra.
+# .env e opcional: o Compose possui valores locais padrao.
 require_env_file() {
-    if [[ -f .env ]]; then
-        return
-    fi
-    if [[ -f .env.example ]]; then
-        warn ".env nao encontrado. Copiando de .env.example."
+    if [[ ! -f .env && -f .env.example ]]; then
         cp .env.example .env
-    else
-        warn ".env nao encontrado. Criando um com os valores padrao do README."
-        cat > .env <<'ENVFILE'
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-DB_NAME=sanguebom
-ENVFILE
+        info ".env criado com configuracoes locais."
     fi
-    ok ".env criado. Ajuste as credenciais se precisar e rode o script de novo."
 }
 
-db_port() {
-    local port
-    port="$(grep -E '^DB_PORT=' .env | tail -1 | cut -d= -f2- | tr -d '[:space:]')"
-    printf '%s' "${port:-5432}"
-}
-
-# ---------------------------------------------------------------- espera
-
-wait_for_postgres() {
-    info "Aguardando o PostgreSQL ficar saudavel..."
-    local waited=0
-    while (( waited < DB_WAIT_SECONDS )); do
-        local state
-        state="$(docker compose ps --format '{{.Service}} {{.Health}}' 2>/dev/null \
-                 | awk '$1 == "postgres" { print $2 }')"
-        if [[ "$state" == "healthy" ]]; then
-            ok "PostgreSQL saudavel."
-            return 0
-        fi
-        sleep 2
-        waited=$(( waited + 2 ))
-    done
-    docker compose logs --tail=30 postgres || true
-    fail "O PostgreSQL nao ficou saudavel em ${DB_WAIT_SECONDS}s."
-}
-
-# O servico sanguebom nao tem healthcheck e o actuator nao esta configurado,
-# entao GET / (HomeResource) e o sinal de readiness disponivel.
-wait_for_app() {
-    info "Aguardando a aplicacao responder em ${APP_URL} (pode compilar na primeira vez)..."
-    local waited=0
-    while (( waited < APP_WAIT_SECONDS )); do
-        if curl -fsS -m 3 "${APP_URL}/" >/dev/null 2>&1; then
-            ok "Aplicacao no ar."
-            return 0
-        fi
-        if [[ "$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null \
-                 | awk '$1 == "sanguebom" { print $2 }')" == "exited" ]]; then
-            printf '\n'
-            docker compose logs --tail=50 sanguebom || true
-            fail "O container da aplicacao parou durante a subida."
-        fi
-        sleep 3
-        waited=$(( waited + 3 ))
-    done
-    printf '\n'
-    docker compose logs --tail=50 sanguebom || true
-    fail "A aplicacao nao respondeu em ${APP_WAIT_SECONDS}s."
+published_port() {
+    local service="$1" container_port="$2"
+    docker compose port "$service" "$container_port" | tail -1
 }
 
 summary() {
-    local port; port="$(db_port)"
     printf '\n'
     ok "${BOLD}Ambiente pronto.${NC}"
-    printf '    Aplicacao : %s\n' "${APP_URL}"
-    printf '    Banco     : localhost:%s\n' "$port"
-    printf '    Logs      : docker compose logs -f sanguebom\n'
-    printf '    Testes    : ./scripts/api-test.sh\n'
-    # O Swagger fica de fora de proposito: springdoc.pathsToMatch=/ limita o
-    # documento OpenAPI ao path "/", entao a UI nao mostra a API real.
-    printf '\n'
+    printf '    Frontend  : http://%s\n' "$(published_port frontend 3000)"
+    printf '    API       : http://%s\n' "$(published_port sanguebom 8080)"
+    printf '    Swagger   : http://%s/swagger-ui/index.html\n' "$(published_port sanguebom 8080)"
+    printf '    Banco     : %s\n' "$(published_port postgres 5432)"
+    printf '    Logs      : docker compose logs -f\n'
+    printf '    Parar     : ./scripts/start.sh --down\n\n'
 }
 
 # ---------------------------------------------------------------- acoes
 
 do_up() {
     info "Construindo e subindo os containers..."
-    docker compose up --build -d
-    wait_for_postgres
-    wait_for_app
+    if ! docker compose up --build -d --wait --wait-timeout 300; then
+        docker compose logs --tail=60
+        fail "Falha na inicializacao. Confira os logs acima e execute novamente."
+    fi
     summary
 }
 
@@ -190,6 +128,7 @@ action=""
 assume_yes="ask"
 for arg in "$@"; do
     case "$arg" in
+        --menu) action="menu" ;;
         --clean) action="clean" ;;
         --keep|--up) action="keep" ;;
         --down|--stop) action="down" ;;
@@ -206,5 +145,6 @@ case "$action" in
     clean) do_clean "$assume_yes" ;;
     keep)  do_up ;;
     down)  do_down ;;
-    "")    menu ;;
+    menu)  menu ;;
+    "")    do_up ;;
 esac

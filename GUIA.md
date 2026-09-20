@@ -18,11 +18,11 @@ scripts, e nenhum deles pede instalação além de Docker e Node.
 
 | Ferramenta | Para quê | Obrigatório |
 |---|---|---|
-| Docker + Docker Compose | Subir o banco e a aplicação | Sim |
+| Docker + Docker Compose | Subir banco, API e frontend | Sim |
 | Node.js | Rodar o Newman via `npx`, sem instalar nada | Só para os testes de API |
 | Java 21 + Maven | Rodar `mvn test` fora do container | Não |
 
-Um arquivo `.env` na raiz é necessário, mas você não precisa criá-lo: o `start.sh` copia do
+O arquivo `.env` é opcional: o Compose usa padrões locais. O `start.sh` copia
 `.env.example` se ele não existir.
 
 ---
@@ -33,34 +33,18 @@ Um arquivo `.env` na raiz é necessário, mas você não precisa criá-lo: o `st
 ./scripts/start.sh
 ```
 
-Um menu aparece:
+O script sobe frontend, API e banco mantendo os dados, aguarda os três serviços ficarem
+saudáveis e mostra os endereços. Abra **http://localhost:3000** para usar a interface.
+A API fica em http://localhost:8080 e o Swagger em http://localhost:8080/swagger-ui/index.html.
 
-```text
-  1) Subir com banco LIMPO  (apaga tudo e reaplica as migrations)
-  2) Subir normalmente      (mantem os dados existentes)
-  3) Parar o ambiente
-  4) Sair
+Também funciona diretamente, inclusive sem arquivo `.env`:
+
+```bash
+docker compose up --build -d --wait
 ```
 
-**Opção 1 — banco limpo.** Remove o volume do PostgreSQL e sobe do zero, deixando o Flyway
-reconstruir o schema e todos os seeds. Pede confirmação: você digita `limpar`. Use quando quiser um
-estado previsível, ou quando o banco estiver esquisito.
-
-**Opção 2 — manter os dados.** Só sobe os containers. Migrations pendentes são aplicadas
-normalmente, e nada do que já existe é apagado.
-
-**Opção 3 — parar.** Derruba os containers. Os dados ficam preservados no volume `postgres-data`,
-então a próxima opção 2 encontra tudo no lugar.
-
-Quando termina, o script mostra:
-
-```text
-==> Ambiente pronto.
-    Aplicacao : http://localhost:8080
-    Banco     : localhost:5432
-    Logs      : docker compose logs -f sanguebom
-    Testes    : ./scripts/api-test.sh
-```
+Para abrir o menu de operações use `./scripts/start.sh --menu`. A limpeza pede confirmação
+antes de remover o volume; a inicialização normal preserva os dados existentes.
 
 ### Sem menu (CI, scripts, atalhos)
 
@@ -76,8 +60,8 @@ Quando termina, o script mostra:
 - Confere se o Docker está instalado e se o daemon responde.
 - Cria um `.env` padrão se não existir, e avisa que criou.
 - Espera o PostgreSQL ficar saudável antes de seguir.
-- Espera a aplicação responder em `http://localhost:8080` — a primeira subida compila o projeto
-  dentro da imagem, então pode demorar alguns minutos.
+- Aguarda os healthchecks da API e do frontend. A primeira subida compila ambos os projetos
+  dentro das imagens, então pode demorar alguns minutos.
 - Se a aplicação não subir, imprime os últimos 50 logs do container e sai com erro, em vez de
   dizer que deu tudo certo.
 
@@ -203,7 +187,8 @@ curl -N http://localhost:8080/api/users/1/notifications/stream
 docker compose logs -f sanguebom
 ```
 
-**O Flyway reclama de migration.** Suba com o banco limpo:
+**O Flyway reclama de migration.** Verifique os logs primeiro. Em um ambiente de demonstração
+sem dados que você precise preservar, é possível recriar o banco (apaga todos os dados):
 ```bash
 ./scripts/start.sh --clean
 ```
@@ -219,8 +204,8 @@ docker compose exec postgres psql -U postgres -d sanguebom \
   -c "select version, description, success from flyway_schema_history order by installed_rank;"
 ```
 
-**A porta 8080 ou 5432 já está em uso.** A do banco é configurável pelo `DB_PORT` no `.env`. A da
-aplicação está fixa no `docker-compose.yml`.
+**Uma porta já está em uso.** Ajuste `FRONTEND_PORT`, `API_PORT` ou `DB_PORT` no `.env`
+e execute novamente. Por exemplo, `FRONTEND_PORT=3001` publica a interface em http://localhost:3001.
 
 **Os testes de API falharam.** Rode com o ambiente recriado para descartar sujeira de execuções
 anteriores:
@@ -236,6 +221,7 @@ quebrou, e a descrição dele no Postman aponta o arquivo e a linha.
 
 | Caminho | O que é |
 |---|---|
+| `frontend/` | Interface Next.js e proxy para a API |
 | `scripts/start.sh` | Sobe, para e recria o ambiente |
 | `scripts/api-test.sh` | Executa a collection com o Newman |
 | `postman/sanguebom.postman_collection.json` | A collection |

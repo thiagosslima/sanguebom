@@ -2,47 +2,65 @@ services:
   postgres:
     image: postgres:18.4
     environment:
-      - POSTGRES_USER=${DB_USERNAME}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-sanguebom}
     ports:
-      - "${DB_PORT}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
-      # PGDATA no postgres 18 e /var/lib/postgresql/18/docker, entao o volume
-      # nomeado precisa cobrir /var/lib/postgresql (e nao .../data).
       - postgres-data:/var/lib/postgresql
     networks:
       - sanguebom-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}" ]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
-      retries: 10
-    env_file:
-      - .env
+      retries: 20
 
   sanguebom:
     build:
       context: .
-      args:
-        DB_HOST_ARG: postgres
-        POSTGRES_PASSWORD_ARG: ${DB_PASSWORD}
-        DB_PORT_ARG: 5432
     ports:
-      - "8080:8080"
+      - "127.0.0.1:${API_PORT:-8080}:8080"
     networks:
       - sanguebom-network
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
     environment:
       DB_HOST: postgres
-      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_PORT: 5432
-      DB_USERNAME: ${DB_USERNAME}
-      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_NAME: ${DB_NAME:-sanguebom}
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 20
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    environment:
+      BACKEND_URL: http://sanguebom:8080
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    networks:
+      - sanguebom-network
+    depends_on:
+      sanguebom:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 10
 
 networks:
   sanguebom-network:
