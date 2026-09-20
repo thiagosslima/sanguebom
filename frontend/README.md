@@ -33,7 +33,7 @@ O teste de gravação fica desabilitado por padrão. Ative `E2E_WRITE=1` **apena
 ## Funcionalidades
 
 - Visão geral com contagens, últimos exames e meta periódica.
-- Histórico paginado, busca na página, detalhe e impressão do resultado.
+- Histórico paginado, busca global com filtros de período, unidade e situação, detalhe e impressão identificada do resultado. A busca consulta todas as páginas da API no navegador; históricos muito grandes devem migrar para filtros no servidor.
 - Cadastro de cidadão e perfil, edição, validação de CPF e hash SHA-256 no navegador.
 - Registro de exames com múltiplos marcadores do catálogo e análise pela API.
 - Gráfico e tabela de evolução, filtros de período e comparação de até quatro exames.
@@ -46,20 +46,22 @@ A fonte web tem fallback local; a aplicação continua funcional sem acesso ao G
 
 A navegação usa o App Router do Next.js. O endereço identifica o cidadão e, no resultado, o exame. Os links funcionam ao abrir diretamente, recarregar, abrir em outra aba e navegar com Voltar/Avançar.
 
-| Tela | Endereço |
-| --- | --- |
-| Visão geral | `/cidadaos/1` |
-| Histórico | `/cidadaos/1/exames` |
-| Resultado | `/cidadaos/1/exames/10084` |
-| Novo exame | `/cidadaos/1/exames/novo` |
-| Evolução | `/cidadaos/1/evolucao` |
-| Conquistas | `/cidadaos/1/conquistas` |
-| Notificações | `/cidadaos/1/notificacoes` |
-| Perfil | `/cidadaos/1/perfil` |
-| Cadastro de cidadão | `/cidadaos/novo` |
+| Tela                | Endereço                   |
+| ------------------- | -------------------------- |
+| Visão geral         | `/cidadaos/1`              |
+| Histórico           | `/cidadaos/1/exames`       |
+| Resultado           | `/cidadaos/1/exames/10084` |
+| Novo exame          | `/cidadaos/1/exames/novo`  |
+| Evolução            | `/cidadaos/1/evolucao`     |
+| Conquistas          | `/cidadaos/1/conquistas`   |
+| Notificações        | `/cidadaos/1/notificacoes` |
+| Perfil              | `/cidadaos/1/perfil`       |
+| Cadastro de cidadão | `/cidadaos/novo`           |
 
 Os números são exemplos: use os IDs dos registros disponíveis. O endereço `/` encaminha para o cidadão lembrado neste navegador ou para o primeiro disponível. Um cidadão informado explicitamente na URL sempre tem prioridade sobre a preferência local; endereços inválidos não são substituídos silenciosamente por outro cidadão.
 
-Os filtros temporários das telas e formulários ainda não enviados não são persistidos ao recarregar. Compartilhar a URL não cria autorização de acesso: continuam valendo as limitações de autenticação da API descritas acima.
+Os filtros e a página do histórico ficam na URL e são restaurados ao recarregar ou voltar pelo navegador. Os filtros da evolução e formulários ainda não enviados não são persistidos ao recarregar. Formulários alterados pedem confirmação ao navegar pelos links e ações da aplicação ou recarregar/fechar a aba; os botões Voltar/Avançar do navegador não são interceptados. Compartilhar a URL não cria autorização de acesso: continuam valendo as limitações de autenticação da API descritas acima.
+
+`npx playwright test tests/ux.spec.ts` verifica navegação por teclado, layout mobile, busca global, classificação visual, falhas de consulta e proteção dos formulários com respostas simuladas, sem gravar na API.
 
 O ponto vermelho do sininho indica avisos novos desde a última abertura da lista neste navegador. Abrir pelo sininho, pelo menu ou diretamente pela URL registra a visualização. Esse marcador é local e não altera os estados de entrega `PENDING`/`SENT` da API; não sincroniza a leitura entre dispositivos.

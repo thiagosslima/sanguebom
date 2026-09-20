@@ -55,6 +55,13 @@ const number = (value: number | null | undefined) =>
     ? "—"
     : value.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
+const ruleLimits = (rule: Point["matchedRule"]) => {
+  if (!rule) return "";
+  if (rule.minValue == null) return `Abaixo de ${number(rule.maxValue)}`;
+  if (rule.maxValue == null) return `A partir de ${number(rule.minValue)}`;
+  return `${number(rule.minValue)} a ${number(rule.maxValue)}`;
+};
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`/api/backend${path}`, { signal });
   if (!response.ok) {
@@ -85,6 +92,7 @@ export default function Clinical({ userId }: { userId: number }) {
   const [timelineError, setTimelineError] = useState("");
   const [comparisonError, setComparisonError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [activePoint, setActivePoint] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -93,6 +101,7 @@ export default function Clinical({ userId }: { userId: number }) {
     setSelected([]);
     setComparison(null);
     setTimeline(null);
+    setActivePoint("");
     setPage(0);
     async function load() {
       try {
@@ -136,6 +145,7 @@ export default function Clinical({ userId }: { userId: number }) {
     if (!marker || loading) return;
     const controller = new AbortController();
     setTimeline(null);
+    setActivePoint("");
     setTimelineError("");
     setLoadingTimeline(false);
     if (from && to && from > to) {
@@ -321,67 +331,102 @@ export default function Clinical({ userId }: { userId: number }) {
           )}
         {chart && (
           <figure style={{ margin: "16px 0" }}>
-            <svg
-              viewBox="0 0 780 230"
-              role="img"
-              aria-label={`Evolução de ${markers.find((item) => item.code === marker)?.name || marker}, em ${chart.values[0].unit || "unidades"}. Valores detalhados na tabela abaixo.`}
-              style={{ display: "block", width: "100%", maxHeight: 300 }}
+            <p className="muted">
+              Página {page + 1} de {timeline?.totalPages} · Use os pontos para
+              consultar cada coleta. Deslize o gráfico em telas pequenas.
+            </p>
+            <div
+              className="chart-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label="Gráfico de evolução com rolagem horizontal"
             >
-              {[55, 115, 175].map((y) => (
-                <line
-                  key={y}
-                  x1="65"
-                  x2="715"
-                  y1={y}
-                  y2={y}
-                  stroke="#e7edf0"
-                  strokeDasharray="4 5"
-                />
-              ))}
-              <text x="8" y="59" fontSize="12" fill="#617078">
-                {number(chart.max)}
-              </text>
-              <text x="8" y="179" fontSize="12" fill="#617078">
-                {number(chart.min)}
-              </text>
-              <polyline
-                fill="none"
-                stroke="#d55263"
-                strokeWidth="3"
-                strokeLinejoin="round"
-                points={chart.values
-                  .map((point) => `${point.x},${point.y}`)
-                  .join(" ")}
-              />
-              {chart.values.map((point, index) => (
-                <circle
-                  key={`${point.examId}-${index}`}
-                  cx={point.x}
-                  cy={point.y}
-                  r="5"
-                  fill="#d55263"
-                  stroke="white"
-                  strokeWidth="2"
-                >
-                  <title>
-                    {date(point.collectedAt)}: {number(point.valueNumeric)}{" "}
-                    {point.unit} — {flags[point.flag] || point.flag}
-                  </title>
-                </circle>
-              ))}
-              <text x="65" y="213" fontSize="12" fill="#617078">
-                {date(chart.values[0].collectedAt)}
-              </text>
-              <text
-                x="715"
-                y="213"
-                textAnchor="end"
-                fontSize="12"
-                fill="#617078"
+              <svg
+                viewBox="0 0 780 230"
+                role="group"
+                aria-label={`Evolução de ${markers.find((item) => item.code === marker)?.name || marker}, em ${chart.values[0].unit || "unidades"}. Valores detalhados na tabela abaixo.`}
+                style={{ display: "block", width: "100%", maxHeight: 300 }}
               >
-                {date(chart.values[chart.values.length - 1].collectedAt)}
-              </text>
-            </svg>
+                {[55, 115, 175].map((y) => (
+                  <line
+                    key={y}
+                    x1="65"
+                    x2="715"
+                    y1={y}
+                    y2={y}
+                    stroke="#e7edf0"
+                    strokeDasharray="4 5"
+                  />
+                ))}
+                <text x="8" y="59" fontSize="12" fill="#617078">
+                  {number(chart.max)}
+                </text>
+                <text x="8" y="179" fontSize="12" fill="#617078">
+                  {number(chart.min)}
+                </text>
+                <polyline
+                  fill="none"
+                  stroke="#d55263"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  points={chart.values
+                    .map((point) => `${point.x},${point.y}`)
+                    .join(" ")}
+                />
+                {chart.values.map((point, index) => (
+                  <circle
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${date(point.collectedAt)}: ${number(point.valueNumeric)} ${point.unit} — ${flags[point.flag] || point.flag}`}
+                    onFocus={() =>
+                      setActivePoint(
+                        `${date(point.collectedAt)}: ${number(point.valueNumeric)} ${point.unit} — ${flags[point.flag] || point.flag}`,
+                      )
+                    }
+                    onClick={() =>
+                      setActivePoint(
+                        `${date(point.collectedAt)}: ${number(point.valueNumeric)} ${point.unit} — ${flags[point.flag] || point.flag}`,
+                      )
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setActivePoint(
+                          `${date(point.collectedAt)}: ${number(point.valueNumeric)} ${point.unit} — ${flags[point.flag] || point.flag}`,
+                        );
+                      }
+                    }}
+                    key={`${point.examId}-${index}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r="10"
+                    fill="#d55263"
+                    stroke="white"
+                    strokeWidth="2"
+                  >
+                    <title>
+                      {date(point.collectedAt)}: {number(point.valueNumeric)}{" "}
+                      {point.unit} — {flags[point.flag] || point.flag}
+                    </title>
+                  </circle>
+                ))}
+                <text x="65" y="213" fontSize="12" fill="#617078">
+                  {date(chart.values[0].collectedAt)}
+                </text>
+                <text
+                  x="715"
+                  y="213"
+                  textAnchor="end"
+                  fontSize="12"
+                  fill="#617078"
+                >
+                  {date(chart.values[chart.values.length - 1].collectedAt)}
+                </text>
+              </svg>
+            </div>
+            <p className="chart-reading" role="status">
+              {activePoint || "Selecione um ponto para consultar o resultado."}
+            </p>
             <figcaption className="muted">
               {chart.values[0].unit || "Valores numéricos"} · Resultados da
               página atual, em ordem cronológica.
@@ -428,8 +473,7 @@ export default function Clinical({ userId }: { userId: number }) {
                         {point.matchedRule?.description || "Não informada"}
                         {point.matchedRule && (
                           <small className="muted" style={{ display: "block" }}>
-                            Limites: {number(point.matchedRule.minValue)} a{" "}
-                            {number(point.matchedRule.maxValue)}
+                            Limites: {ruleLimits(point.matchedRule)}
                           </small>
                         )}
                       </td>

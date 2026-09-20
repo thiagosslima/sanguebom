@@ -1,8 +1,9 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { screenUrl, type Screen } from "../lib/navigation";
+import { confirmNavigation } from "../hooks/use-form-feedback";
 import {
   newerNotification,
   useNotificationIndicator,
@@ -122,7 +123,13 @@ async function api<T>(path: string, signal?: AbortSignal): Promise<T> {
   }
   return r.json();
 }
-function Badge({ value }: { value?: string | null }) {
+function Badge({
+  value,
+  context = "status",
+}: {
+  value?: string | null;
+  context?: "status" | "risk" | "marker";
+}) {
   return (
     <span
       className={
@@ -134,7 +141,7 @@ function Badge({ value }: { value?: string | null }) {
           "RELEASED",
           "COMPLETED",
           "UP_TO_DATE",
-          "LOW",
+          ...(context === "risk" ? ["LOW"] : []),
         ].includes(value)
           ? "green"
           : value && ["HIGH", "VERY_HIGH", "OVERDUE"].includes(value)
@@ -142,7 +149,15 @@ function Badge({ value }: { value?: string | null }) {
             : "amber")
       }
     >
-      {value ? labels[value] || value : "Não avaliado"}
+      {value
+        ? context === "risk"
+          ? `Risco ${labels[value]?.toLowerCase() || value}`
+          : context === "marker" && value === "LOW"
+            ? "Abaixo da referência"
+            : context === "marker" && value === "HIGH"
+              ? "Acima da referência"
+              : labels[value] || value
+        : "Não avaliado"}
     </span>
   );
 }
@@ -164,6 +179,20 @@ export default function Dashboard({
   routeExamId?: number;
 }) {
   const router = useRouter();
+  const menuRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [smallScreen, setSmallScreen] = useState(false);
+  const loadedOwner = useRef<number | null>(null);
+  const [failures, setFailures] = useState<string[]>([]);
+  const [allExams, setAllExams] = useState<Exam[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [unitFilter, setUnitFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [historyReady, setHistoryReady] = useState(false);
+  const historyOwner = useRef<number | null>(null);
   const tab = screen;
   const detailId = routeExamId ?? null;
   const [users, setUsers] = useState<User[]>([]),
@@ -196,6 +225,80 @@ export default function Dashboard({
     } | null>(null),
     [detailError, setDetailError] = useState("");
   const userId = routeUserId ?? selectedUserId;
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const update = () => {
+      setSmallScreen(media.matches);
+      if (!media.matches) setMobile(false);
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!mobile || !smallScreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    menuRef.current?.querySelector<HTMLElement>("button, a")?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobile(false);
+      }
+      if (event.key !== "Tab") return;
+      const elements = menuRef.current?.querySelectorAll<HTMLElement>(
+        "a[href], button:not(:disabled)",
+      );
+      if (!elements?.length) return;
+      const first = elements[0],
+        last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", keydown);
+      menuButtonRef.current?.focus();
+    };
+  }, [mobile, smallScreen]);
+  useEffect(() => {
+    if (!userId || tab !== "exams") return;
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    setHistoryError("");
+    if (historyOwner.current !== userId) setAllExams([]);
+    void (async () => {
+      try {
+        const first = await api<Page<Exam>>(
+          `users/${userId}/exams?size=100&page=0`,
+          controller.signal,
+        );
+        const content = [...first.content];
+        for (let index = 1; index < first.totalPages; index++) {
+          const next = await api<Page<Exam>>(
+            `users/${userId}/exams?size=100&page=${index}`,
+            controller.signal,
+          );
+          content.push(...next.content);
+        }
+        if (!controller.signal.aborted) {
+          historyOwner.current = userId;
+          setAllExams(content);
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) setHistoryError((e as Error).message);
+      } finally {
+        if (!controller.signal.aborted) setHistoryLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [userId, tab, revision]);
   const [notificationHead, setNotificationHead] =
     useState<NotificationHead | null>(null);
   const { hasUnseen, markSeen } = useNotificationIndicator(
@@ -250,12 +353,15 @@ export default function Dashboard({
     const c = new AbortController();
     setLoading(true);
     setError("");
-    setGoal(null);
-    setExams({ content: [], totalPages: 0, totalElements: 0 });
-    setNotices({ content: [], totalPages: 0, totalElements: 0 });
-    setEarned([]);
+    if (loadedOwner.current !== userId) {
+      setGoal(null);
+      setExams({ content: [], totalPages: 0, totalElements: 0 });
+      setNotices({ content: [], totalPages: 0, totalElements: 0 });
+      setEarned([]);
+      setFailures([]);
+    }
     Promise.allSettled([
-      api<Page<Exam>>(`users/${userId}/exams?page=${page}&size=8`, c.signal),
+      api<Page<Exam>>(`users/${userId}/exams?page=0&size=8`, c.signal),
       api<Goal>(`users/${userId}/exam-goal`, c.signal),
       api<Page<Notice>>(
         `users/${userId}/notifications?page=${noticePage}&size=8`,
@@ -266,6 +372,14 @@ export default function Dashboard({
     ])
       .then(([a, b, d, e, f]) => {
         if (c.signal.aborted) return;
+        loadedOwner.current = userId;
+        setFailures(
+          [a, b, d, e, f].flatMap((result, index) =>
+            result.status === "rejected"
+              ? [["exams", "goal", "notices", "achievements", "earned"][index]]
+              : [],
+          ),
+        );
         if (a.status === "fulfilled") setExams(a.value);
         if (b.status === "fulfilled") setGoal(b.value);
         if (d.status === "fulfilled") {
@@ -302,7 +416,7 @@ export default function Dashboard({
         if (!c.signal.aborted) setLoading(false);
       });
     return () => c.abort();
-  }, [userId, revision, page, noticePage]);
+  }, [userId, revision, noticePage]);
   useEffect(() => {
     if (!userId) return;
     const source = new EventSource(
@@ -340,16 +454,88 @@ export default function Dashboard({
   const user = users.find((u) => u.id === userId);
   useEffect(() => {
     setMobile(false);
-    setQuery("");
-    setPage(0);
     setNoticePage(0);
   }, [tab, userId, detailId]);
-  const go = (value: Screen, citizenId = userId) =>
-    router.push(screenUrl(value, citizenId));
+  useEffect(() => {
+    if (tab !== "exams") {
+      setHistoryReady(false);
+      return;
+    }
+    const restore = () => {
+      const params = new URLSearchParams(window.location.search);
+      setQuery(params.get("q") || "");
+      setFromDate(params.get("from") || "");
+      setToDate(params.get("to") || "");
+      setUnitFilter(params.get("unit") || "");
+      setStatusFilter(params.get("status") || "");
+      const requested = Number(params.get("page") || "1");
+      setPage(
+        Number.isSafeInteger(requested) && requested > 0 ? requested - 1 : 0,
+      );
+      setHistoryReady(true);
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [tab, userId]);
+  useEffect(() => {
+    if (!historyReady || tab !== "exams") return;
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
+    if (unitFilter) params.set("unit", unitFilter);
+    if (statusFilter) params.set("status", statusFilter);
+    if (page) params.set("page", String(page + 1));
+    const suffix = params.size ? `?${params}` : "";
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${suffix}`,
+    );
+  }, [
+    query,
+    fromDate,
+    toDate,
+    unitFilter,
+    statusFilter,
+    page,
+    historyReady,
+    tab,
+  ]);
+  const go = (value: Screen, citizenId = userId) => {
+    if (confirmNavigation()) router.push(screenUrl(value, citizenId));
+  };
   const refresh = () => setRevision((r) => r + 1);
+  const filteredExams = allExams.filter((e) => {
+    const collected = new Date(e.collectedAt);
+    const localDate = `${collected.getFullYear()}-${String(collected.getMonth() + 1).padStart(2, "0")}-${String(collected.getDate()).padStart(2, "0")}`;
+    return (
+      `${e.id} ${e.healthUnitName} ${date(e.collectedAt)}`
+        .toLowerCase()
+        .includes(query.toLowerCase()) &&
+      (!fromDate || localDate >= fromDate) &&
+      (!toDate || localDate <= toDate) &&
+      (!unitFilter || e.healthUnitName === unitFilter) &&
+      (!statusFilter || e.status === statusFilter)
+    );
+  });
+  const historyPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(filteredExams.length / 8) - 1),
+  );
   const examTable = (compact = false) => (
     <>
-      {exams.content.length === 0 ? (
+      {(compact ? failures.includes("exams") : !!historyError) ? (
+        <p role="alert">
+          Não foi possível carregar os exames.{" "}
+          <button className="text-button" onClick={refresh}>
+            Tentar novamente
+          </button>
+        </p>
+      ) : !compact && historyLoading && historyOwner.current !== userId ? (
+        <p role="status">Carregando todo o histórico…</p>
+      ) : (compact ? exams.content : allExams).length === 0 ? (
         <div className="empty">
           <FileText size={30} />
           <h3>Seu histórico começa aqui</h3>
@@ -359,7 +545,7 @@ export default function Dashboard({
           </button>
         </div>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap exam-history">
           <table>
             <thead>
               <tr>
@@ -372,50 +558,41 @@ export default function Dashboard({
               </tr>
             </thead>
             <tbody>
-              {exams.content
-                .filter(
-                  (e) =>
-                    !query ||
-                    `${e.id} ${e.healthUnitName} ${date(e.collectedAt)}`
-                      .toLowerCase()
-                      .includes(query.toLowerCase()),
-                )
-                .slice(0, compact ? 4 : 8)
-                .map((e) => (
-                  <tr key={e.id}>
-                    <td>
-                      <div className="exam-name">
-                        <span className="small-icon">
-                          <FileText size={19} />
-                        </span>
-                        <div>
-                          <strong>Exame #{e.id}</strong>
-                          <small>{date(e.collectedAt)}</small>
-                        </div>
+              {(compact
+                ? exams.content.slice(0, 4)
+                : filteredExams.slice(historyPage * 8, historyPage * 8 + 8)
+              ).map((e) => (
+                <tr key={e.id}>
+                  <td>
+                    <div className="exam-name">
+                      <span className="small-icon">
+                        <FileText size={19} />
+                      </span>
+                      <div>
+                        <strong>Exame #{e.id}</strong>
+                        <small>{date(e.collectedAt)}</small>
                       </div>
-                    </td>
-                    <td>{e.healthUnitName || "Não informada"}</td>
-                    <td>
-                      <Badge value={e.status} />
-                    </td>
-                    <td>
-                      <Link
-                        className="text-button"
-                        href={screenUrl("detail", userId, e.id)}
-                      >
-                        Ver resultado <ArrowRight size={15} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                    </div>
+                  </td>
+                  <td>{e.healthUnitName || "Não informada"}</td>
+                  <td>
+                    <Badge value={e.status} />
+                  </td>
+                  <td>
+                    <Link
+                      className="text-button"
+                      href={screenUrl("detail", userId, e.id)}
+                    >
+                      Ver resultado <ArrowRight size={15} />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
-          {query &&
-            !exams.content.some((e) =>
-              `${e.id} ${e.healthUnitName} ${date(e.collectedAt)}`
-                .toLowerCase()
-                .includes(query.toLowerCase()),
-            ) && <p className="empty">Nenhum exame encontrado nesta página.</p>}
+          {!compact && !filteredExams.length && (
+            <p className="empty">Nenhum exame encontrado com esses filtros.</p>
+          )}
         </div>
       )}
     </>
@@ -425,7 +602,22 @@ export default function Dashboard({
       <a className="skip" href="#main">
         Pular para o conteúdo
       </a>
-      <aside className={"sidebar " + (mobile ? "open" : "")}>
+      <aside
+        ref={menuRef}
+        id="main-menu"
+        inert={smallScreen && !mobile}
+        role={smallScreen && mobile ? "dialog" : undefined}
+        aria-modal={smallScreen && mobile ? true : undefined}
+        aria-label="Menu principal"
+        className={"sidebar " + (mobile ? "open" : "")}
+      >
+        <button
+          className="icon-button menu-close"
+          aria-label="Fechar menu"
+          onClick={() => setMobile(false)}
+        >
+          <X size={22} />
+        </button>
         <Link
           className="brand"
           href={screenUrl("overview", userId)}
@@ -449,7 +641,13 @@ export default function Dashboard({
               <n.icon size={19} />
               {n.label}
               {n.id === "notifications" && notices.totalElements > 0 && (
-                <span className="nav-count">{notices.totalElements}</span>
+                <span
+                  className="nav-count"
+                  aria-label={`${notices.totalElements} avisos no histórico`}
+                >
+                  {notices.totalElements}
+                  <span className="sr-only"> no histórico</span>
+                </span>
               )}
             </Link>
           ))}
@@ -479,12 +677,15 @@ export default function Dashboard({
           onClick={() => setMobile(false)}
         />
       )}
-      <div className="main-shell">
+      <div className="main-shell" inert={smallScreen && mobile}>
         <header className="topbar">
           <div className="topbar-left">
             <button
               className="icon-button mobile-toggle"
               aria-label="Abrir menu"
+              ref={menuButtonRef}
+              aria-expanded={mobile}
+              aria-controls="main-menu"
               onClick={() => setMobile(!mobile)}
             >
               <Menu size={22} />
@@ -530,7 +731,7 @@ export default function Dashboard({
                 .join("") || "SB"}
             </span>
             <label className="user-select">
-              <span>Cidadão selecionado</span>
+              <span>Consultar cidadão</span>
               <select
                 aria-label="Selecionar cidadão"
                 value={userId ?? ""}
@@ -642,8 +843,10 @@ export default function Dashboard({
                 <NewExam
                   key={userId}
                   userId={userId}
-                  onSaved={() => {
-                    go("exams");
+                  onSaved={(examId) => {
+                    if (examId)
+                      router.push(screenUrl("detail", userId, examId));
+                    else go("exams");
                     refresh();
                   }}
                 />
@@ -652,7 +855,9 @@ export default function Dashboard({
                   key={userId}
                   userId={userId}
                   onSaved={() => {
-                    void loadUsers();
+                    void api<User[]>("appUsers")
+                      .then(setUsers)
+                      .catch(() => {});
                     refresh();
                   }}
                 />
@@ -673,15 +878,20 @@ export default function Dashboard({
                     <>
                       <div className="section-heading">
                         <div>
+                          <p className="result-owner">
+                            Cidadão: {user?.name} · Cadastro #{userId}
+                          </p>
                           <h2>Exame #{detail.id}</h2>
                           <p>
                             {date(detail.collectedAt)} · {detail.healthUnitName}
                           </p>
                         </div>
-                        <Badge value={detail.riskLevel} />
+                        <Badge value={detail.riskLevel} context="risk" />
                       </div>
-                      <div className="analysis">
-                        <ShieldCheck size={25} />
+                      <div
+                        className={`analysis ${detail.riskLevel === "HIGH" || detail.riskLevel === "VERY_HIGH" ? "analysis-alert" : detail.riskLevel === "LOW" ? "" : "analysis-neutral"}`}
+                      >
+                        <Activity size={25} />
                         <div>
                           <strong>
                             Avaliação do exame{" "}
@@ -695,7 +905,7 @@ export default function Dashboard({
                           </p>
                         </div>
                       </div>
-                      <div className="table-wrap">
+                      <div className="table-wrap result-items">
                         <table>
                           <thead>
                             <tr>
@@ -707,16 +917,18 @@ export default function Dashboard({
                           <tbody>
                             {detail.items.map((i) => (
                               <tr key={i.itemCode}>
-                                <td>
+                                <td data-label="Marcador">
                                   <strong>{i.itemName}</strong>
                                   <small>{i.itemCode}</small>
                                 </td>
-                                <td>
-                                  {i.valueNumeric ?? i.valueText ?? "—"}{" "}
+                                <td data-label="Resultado">
+                                  {i.valueNumeric != null
+                                    ? i.valueNumeric.toLocaleString("pt-BR")
+                                    : i.valueText || "—"}{" "}
                                   {i.unit}
                                 </td>
-                                <td>
-                                  <Badge value={i.flag} />
+                                <td data-label="Classificação">
+                                  <Badge value={i.flag} context="marker" />
                                 </td>
                               </tr>
                             ))}
@@ -737,7 +949,7 @@ export default function Dashboard({
                     </>
                   )}
                 </section>
-              ) : loading ? (
+              ) : loadedOwner.current !== userId ? (
                 <div className="panel loading" role="status">
                   <span className="spinner" /> Atualizando seus dados…
                 </div>
@@ -745,55 +957,59 @@ export default function Dashboard({
                 <>
                   {tab === "overview" && (
                     <>
-                      <section className="hero">
-                        <div>
-                          <span className="hero-label">
-                            <span /> SUA SAÚDE EM PRIMEIRO LUGAR
-                          </span>
-                          <h2>
-                            Cuidar de você é<br />
-                            sempre um bom plano.
-                          </h2>
-                          <p>
-                            Acompanhe seus resultados, conheça sua evolução
-                            <br className="desktop-break" /> e dê o próximo
-                            passo para uma vida mais saudável.
-                          </p>
-                          <button
-                            className="hero-button"
-                            onClick={() => go("exams")}
-                          >
-                            Acompanhar meus exames <ArrowRight size={17} />
-                          </button>
-                        </div>
-                        <div className="hero-art" aria-hidden="true">
-                          <div className="orbit orbit-one" />
-                          <div className="orbit orbit-two" />
-                          <div className="heart-orb">
-                            <Heart
-                              size={94}
-                              strokeWidth={1.4}
-                              fill="currentColor"
-                            />
-                            <Activity className="heart-pulse" size={69} />
-                          </div>
-                          <span className="floating-card float-top">
-                            <ShieldCheck size={24} />
-                            <span>
-                              Mais cuidado<strong>Mais tranquilidade</strong>
-                            </span>
-                          </span>
-                          <span className="floating-card float-bottom">
-                            <span className="mini-check">
-                              <Check size={16} />
-                            </span>
-                            Sua saúde importa
-                          </span>
-                          <span className="sparkle">
-                            <Sparkles size={26} />
-                          </span>
-                        </div>
-                      </section>
+                      {exams.totalElements === 0 &&
+                        !failures.includes("exams") && (
+                          <section className="hero">
+                            <div>
+                              <span className="hero-label">
+                                <span /> SUA SAÚDE EM PRIMEIRO LUGAR
+                              </span>
+                              <h2>
+                                Cuidar de você é<br />
+                                sempre um bom plano.
+                              </h2>
+                              <p>
+                                Acompanhe seus resultados, conheça sua evolução
+                                <br className="desktop-break" /> e dê o próximo
+                                passo para uma vida mais saudável.
+                              </p>
+                              <button
+                                className="hero-button"
+                                onClick={() => go("exams")}
+                              >
+                                Acompanhar meus exames <ArrowRight size={17} />
+                              </button>
+                            </div>
+                            <div className="hero-art" aria-hidden="true">
+                              <div className="orbit orbit-one" />
+                              <div className="orbit orbit-two" />
+                              <div className="heart-orb">
+                                <Heart
+                                  size={94}
+                                  strokeWidth={1.4}
+                                  fill="currentColor"
+                                />
+                                <Activity className="heart-pulse" size={69} />
+                              </div>
+                              <span className="floating-card float-top">
+                                <ShieldCheck size={24} />
+                                <span>
+                                  Mais cuidado
+                                  <strong>Mais tranquilidade</strong>
+                                </span>
+                              </span>
+                              <span className="floating-card float-bottom">
+                                <span className="mini-check">
+                                  <Check size={16} />
+                                </span>
+                                Sua saúde importa
+                              </span>
+                              <span className="sparkle">
+                                <Sparkles size={26} />
+                              </span>
+                            </div>
+                          </section>
+                        )}
                       <div className="stats">
                         <div className="stat-card">
                           <span className="stat-icon pink">
@@ -802,7 +1018,9 @@ export default function Dashboard({
                           <div>
                             <span>Exames registrados</span>
                             <strong>
-                              {exams.totalElements}
+                              {failures.includes("exams")
+                                ? "Indisponível"
+                                : exams.totalElements}
                               <small>na sua jornada</small>
                             </strong>
                           </div>
@@ -814,13 +1032,17 @@ export default function Dashboard({
                           <div>
                             <span>Próximo exame</span>
                             <strong className="stat-date">
-                              {goal?.dueDate
-                                ? date(goal.dueDate)
-                                : "Vamos começar?"}
+                              {failures.includes("goal")
+                                ? "Indisponível"
+                                : goal?.dueDate
+                                  ? date(goal.dueDate)
+                                  : "Vamos começar?"}
                               <small>
-                                {goal
-                                  ? labels[goal.status]
-                                  : "Configure seu perfil"}
+                                {failures.includes("goal")
+                                  ? "Tente atualizar os dados"
+                                  : goal
+                                    ? labels[goal.status]
+                                    : "Configure seu perfil"}
                               </small>
                             </strong>
                           </div>
@@ -832,7 +1054,9 @@ export default function Dashboard({
                           <div>
                             <span>Conquistas desbloqueadas</span>
                             <strong>
-                              {earned.length}
+                              {failures.includes("earned")
+                                ? "Indisponível"
+                                : earned.length}
                               <small>motivos para celebrar</small>
                             </strong>
                           </div>
@@ -857,41 +1081,53 @@ export default function Dashboard({
                           {examTable(true)}
                         </section>
                         <section className="panel goal-panel">
-                          <div className="section-heading">
-                            <h2>Sua meta de cuidado</h2>
-                            <span className="small-icon teal">
-                              <CalendarDays size={20} />
-                            </span>
-                          </div>
-                          <div className="goal-ring">
-                            <Heart size={25} />
-                            <strong>
-                              {goal?.daysRemaining != null
-                                ? Math.abs(goal.daysRemaining)
-                                : "—"}
-                            </strong>
-                            <span>
-                              {goal?.daysRemaining != null
-                                ? goal.daysRemaining < 0
-                                  ? "dias após o prazo"
-                                  : "dias para o próximo"
-                                : "sem histórico"}
-                            </span>
-                          </div>
-                          <Badge value={goal?.status} />
-                          <p>
-                            {goal?.status === "NO_HISTORY"
-                              ? "O primeiro exame é o início de uma boa rotina."
-                              : goal?.status === "OVERDUE"
-                                ? "Que tal retomar sua rotina de exames?"
-                                : "Um pequeno lembrete para manter o cuidado em dia."}
-                          </p>
-                          <button
-                            className="text-button"
-                            onClick={() => go("profile")}
-                          >
-                            Ajustar minha periodicidade <ArrowRight size={14} />
-                          </button>
+                          {failures.includes("goal") ? (
+                            <p role="alert">
+                              Não foi possível carregar sua meta.{" "}
+                              <button className="text-button" onClick={refresh}>
+                                Tentar novamente
+                              </button>
+                            </p>
+                          ) : (
+                            <>
+                              <div className="section-heading">
+                                <h2>Sua meta de cuidado</h2>
+                                <span className="small-icon teal">
+                                  <CalendarDays size={20} />
+                                </span>
+                              </div>
+                              <div className="goal-ring">
+                                <Heart size={25} />
+                                <strong>
+                                  {goal?.daysRemaining != null
+                                    ? Math.abs(goal.daysRemaining)
+                                    : "—"}
+                                </strong>
+                                <span>
+                                  {goal?.daysRemaining != null
+                                    ? goal.daysRemaining < 0
+                                      ? "dias após o prazo"
+                                      : "dias para o próximo"
+                                    : "sem histórico"}
+                                </span>
+                              </div>
+                              <Badge value={goal?.status} />
+                              <p>
+                                {goal?.status === "NO_HISTORY"
+                                  ? "O primeiro exame é o início de uma boa rotina."
+                                  : goal?.status === "OVERDUE"
+                                    ? "Que tal retomar sua rotina de exames?"
+                                    : "Um pequeno lembrete para manter o cuidado em dia."}
+                              </p>
+                              <button
+                                className="text-button"
+                                onClick={() => go("profile")}
+                              >
+                                Ajustar minha periodicidade{" "}
+                                <ArrowRight size={14} />
+                              </button>
+                            </>
+                          )}
                         </section>
                       </div>
                       <section className="bottom-banner">
@@ -924,69 +1160,176 @@ export default function Dashboard({
                         <label className="search">
                           <Search size={17} />
                           <input
-                            placeholder="Buscar nesta página"
-                            aria-label="Buscar exame nesta página"
+                            placeholder="Buscar em todo o histórico"
+                            aria-label="Buscar em todo o histórico"
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => {
+                              setQuery(e.target.value);
+                              setPage(0);
+                            }}
                           />
                         </label>
                       </div>
+                      <div className="history-filters">
+                        <label className="field">
+                          De
+                          <input
+                            type="date"
+                            value={fromDate}
+                            max={toDate || undefined}
+                            onChange={(e) => {
+                              setFromDate(e.target.value);
+                              setPage(0);
+                            }}
+                          />
+                        </label>
+                        <label className="field">
+                          Até
+                          <input
+                            type="date"
+                            value={toDate}
+                            min={fromDate || undefined}
+                            onChange={(e) => {
+                              setToDate(e.target.value);
+                              setPage(0);
+                            }}
+                          />
+                        </label>
+                        <label className="field">
+                          Unidade
+                          <select
+                            value={unitFilter}
+                            onChange={(e) => {
+                              setUnitFilter(e.target.value);
+                              setPage(0);
+                            }}
+                          >
+                            <option value="">Todas as unidades</option>
+                            {[
+                              ...new Set(
+                                allExams
+                                  .map((e) => e.healthUnitName)
+                                  .filter(Boolean),
+                              ),
+                            ].map((unit) => (
+                              <option key={unit}>{unit}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="field">
+                          Situação
+                          <select
+                            value={statusFilter}
+                            onChange={(e) => {
+                              setStatusFilter(e.target.value);
+                              setPage(0);
+                            }}
+                          >
+                            <option value="">Todas as situações</option>
+                            {[...new Set(allExams.map((e) => e.status))].map(
+                              (status) => (
+                                <option key={status} value={status}>
+                                  {labels[status] || status}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </label>
+                      </div>
+                      {(query ||
+                        fromDate ||
+                        toDate ||
+                        unitFilter ||
+                        statusFilter) && (
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setQuery("");
+                            setFromDate("");
+                            setToDate("");
+                            setUnitFilter("");
+                            setStatusFilter("");
+                            setPage(0);
+                          }}
+                        >
+                          Limpar filtros
+                        </button>
+                      )}
+                      {!historyLoading && !historyError && (
+                        <p role="status">
+                          {filteredExams.length} exames encontrados
+                        </p>
+                      )}
                       {examTable()}
                       <Pagination
-                        page={page}
-                        pages={exams.totalPages}
+                        page={historyPage}
+                        pages={Math.ceil(filteredExams.length / 8)}
                         change={setPage}
                       />
                     </section>
                   )}
                   {tab === "achievements" && (
                     <>
-                      <div className="achievement-intro">
-                        <Award size={32} />
-                        <div>
-                          <h2>Seu cuidado merece reconhecimento</h2>
-                          <p>
-                            {earned.length} de {achievements.length} conquistas
-                            desbloqueadas. Continue a sua jornada!
-                          </p>
-                        </div>
-                      </div>
-                      <div className="achievement-grid">
-                        {achievements.map((a, i) => {
-                          const won = earned.find(
-                            (e) => e.achievement === a.id,
-                          );
-                          return (
-                            <section
-                              className={
-                                "panel achievement " +
-                                (won ? "earned" : "locked")
-                              }
-                              key={a.id}
-                            >
-                              <span className={"medal medal-" + i}>
-                                <Award size={45} />
-                              </span>
-                              <span className="eyebrow">
-                                {won
-                                  ? "CONQUISTA DESBLOQUEADA"
-                                  : "SEU PRÓXIMO DESAFIO"}
-                              </span>
-                              <h2>{a.name}</h2>
-                              <p>{a.description}</p>
-                              <span className="badge">
-                                {won
-                                  ? `Conquistada em ${date(won.earnedAt)}`
-                                  : "Continue cuidando de você"}
-                              </span>
-                            </section>
-                          );
-                        })}
-                      </div>
-                      {!achievements.length && (
-                        <div className="panel empty">
-                          Nenhuma conquista disponível no momento.
-                        </div>
+                      {failures.some((key) =>
+                        ["achievements", "earned"].includes(key),
+                      ) ? (
+                        <p className="error" role="alert">
+                          Não foi possível carregar suas conquistas.{" "}
+                          <button className="text-button" onClick={refresh}>
+                            Tentar novamente
+                          </button>
+                        </p>
+                      ) : (
+                        <>
+                          <div className="achievement-intro">
+                            <Award size={32} />
+                            <div>
+                              <h2>Seu cuidado merece reconhecimento</h2>
+                              <p>
+                                {earned.length} de {achievements.length}{" "}
+                                conquistas desbloqueadas. Continue a sua
+                                jornada!
+                              </p>
+                            </div>
+                          </div>
+                          <div className="achievement-grid">
+                            {achievements.map((a, i) => {
+                              const won = earned.find(
+                                (e) => e.achievement === a.id,
+                              );
+                              return (
+                                <section
+                                  className={
+                                    "panel achievement " +
+                                    (won ? "earned" : "locked")
+                                  }
+                                  key={a.id}
+                                >
+                                  <span className={"medal medal-" + i}>
+                                    <Award size={45} />
+                                  </span>
+                                  <span className="eyebrow">
+                                    {won
+                                      ? "CONQUISTA DESBLOQUEADA"
+                                      : "SEU PRÓXIMO DESAFIO"}
+                                  </span>
+                                  <h2>{a.name}</h2>
+                                  <p>{a.description}</p>
+                                  <span className="badge">
+                                    {won
+                                      ? `Conquistada em ${date(won.earnedAt)}`
+                                      : "Continue cuidando de você"}
+                                  </span>
+                                </section>
+                              );
+                            })}
+                          </div>
+                          {!achievements.length && (
+                            <div className="panel empty">
+                              Nenhuma conquista disponível no momento.
+                            </div>
+                          )}
+                        </>
                       )}
                     </>
                   )}
@@ -1007,7 +1350,14 @@ export default function Dashboard({
                           <RefreshCw size={19} />
                         </button>
                       </div>
-                      {notices.content.length ? (
+                      {failures.includes("notices") ? (
+                        <p role="alert">
+                          Não foi possível carregar os avisos.{" "}
+                          <button className="text-button" onClick={refresh}>
+                            Tentar novamente
+                          </button>
+                        </p>
+                      ) : notices.content.length ? (
                         notices.content.map((n) => (
                           <article className="notice" key={n.id}>
                             <span className="stat-icon pink">

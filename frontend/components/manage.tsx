@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { screenUrl } from "../lib/navigation";
+import { useFormFeedback } from "../hooks/use-form-feedback";
 
 type Citizen = {
   id?: number;
@@ -237,6 +240,7 @@ export function Profile({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const { formRef, markDirty, markSaved } = useFormFeedback(error);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
@@ -320,6 +324,7 @@ export function Profile({
       );
       setHealth((v) => ({ ...v, id }));
       setSuccess("Seu perfil foi atualizado.");
+      markSaved();
       onSaved();
     } catch (e) {
       setError(
@@ -350,7 +355,7 @@ export function Profile({
       </div>
     );
   return (
-    <form className="panel" onSubmit={save}>
+    <form ref={formRef} className="panel" onSubmit={save} onChange={markDirty}>
       <h2>Dados pessoais</h2>
       <p className="muted">
         Mantenha suas informações atualizadas para acompanhar sua saúde.
@@ -360,7 +365,7 @@ export function Profile({
         <h2>Perfil de saúde</h2>
         <HealthFields value={health} onChange={setHealth} />
         {error && (
-          <p className="error" role="alert">
+          <p className="error" role="alert" tabIndex={-1}>
             {error}
           </p>
         )}
@@ -384,6 +389,7 @@ export function NewUser({ onSaved }: { onSaved: (id: number) => void }) {
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const { formRef, markDirty, markSaved } = useFormFeedback(error);
   async function save(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -446,6 +452,7 @@ export function NewUser({ onSaved }: { onSaved: (id: number) => void }) {
           id,
         ),
       );
+      markSaved();
       onSaved(id);
     } catch (e) {
       setError(
@@ -456,7 +463,7 @@ export function NewUser({ onSaved }: { onSaved: (id: number) => void }) {
     }
   }
   return (
-    <form className="panel" onSubmit={save}>
+    <form ref={formRef} className="panel" onSubmit={save} onChange={markDirty}>
       <h2>Comece seu acompanhamento</h2>
       <p className="muted">
         Cadastre seus dados e seu perfil de saúde para registrar exames.
@@ -475,18 +482,23 @@ export function NewUser({ onSaved }: { onSaved: (id: number) => void }) {
               autoComplete="off"
               maxLength={14}
               placeholder="000.000.000-00"
+              aria-invalid={error.includes("CPF") || undefined}
+              aria-describedby={
+                error.includes("CPF") ? "citizen-error" : undefined
+              }
               value={cpf}
               onChange={(e) => setCpf(e.target.value)}
             />
             <small className="muted">
-              O CPF é convertido em hash no navegador antes de ser enviado.
+              Usamos o CPF para identificar seu cadastro e evitar duplicidades.
+              O número original não é enviado ao servidor.
             </small>
           </label>
         </fieldset>
         <h2>Seu perfil de saúde</h2>
         <HealthFields value={health} onChange={setHealth} />
         {error && (
-          <p className="error" role="alert">
+          <p id="citizen-error" className="error" role="alert" tabIndex={-1}>
             {error}
           </p>
         )}
@@ -507,7 +519,7 @@ export function NewExam({
   onSaved,
 }: {
   userId: number;
-  onSaved: () => void;
+  onSaved: (examId?: number) => void;
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -523,6 +535,8 @@ export function NewExam({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [savedExamId, setSavedExamId] = useState<number>();
+  const { formRef, markDirty, markSaved } = useFormFeedback(error);
   const [retry, setRetry] = useState(0);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -594,17 +608,25 @@ export function NewExam({
         throw new Error(
           "Preencha todos os marcadores com resultados numéricos maiores ou iguais a zero.",
         );
-      await api("exams", "POST", {
-        userId,
-        healthUnitId: Number(unit),
-        collectedAt: collection.toISOString(),
-        externalReference: reference.trim() || null,
-        analyzedItems: rows.map((row) => ({
-          examItemId: Number(row.item),
-          measuredValue: Number(row.value),
-        })),
-      });
+      const result = await api<{ examId?: number; id?: number } | number>(
+        "exams",
+        "POST",
+        {
+          userId,
+          healthUnitId: Number(unit),
+          collectedAt: collection.toISOString(),
+          externalReference: reference.trim() || null,
+          analyzedItems: rows.map((row) => ({
+            examItemId: Number(row.item),
+            measuredValue: Number(row.value),
+          })),
+        },
+      );
+      setSavedExamId(
+        typeof result === "number" ? result : (result?.examId ?? result?.id),
+      );
       setDone(true);
+      markSaved();
     } catch (e) {
       setError(message(e));
     } finally {
@@ -626,8 +648,8 @@ export function NewExam({
           Os resultados foram salvos e a análise está disponível no seu
           histórico.
         </p>
-        <button className="button" onClick={onSaved}>
-          Ver meus exames
+        <button className="button" onClick={() => onSaved(savedExamId)}>
+          {savedExamId ? "Ver resultado do exame" : "Ver meus exames"}
         </button>
       </div>
     );
@@ -645,10 +667,13 @@ export function NewExam({
         >
           Verificar novamente
         </button>
+        <Link className="button" href={screenUrl("profile", userId)}>
+          Completar meu perfil
+        </Link>
       </div>
     );
   return (
-    <form className="panel" onSubmit={save}>
+    <form ref={formRef} className="panel" onSubmit={save} onChange={markDirty}>
       <h2>Informações do exame</h2>
       <p className="muted">
         Transcreva os resultados do laudo e confira a unidade de cada marcador.
@@ -764,14 +789,15 @@ export function NewExam({
           className="button secondary"
           type="button"
           disabled={rows.length >= items.length}
-          onClick={() =>
-            setRows((previous) => [...previous, { item: "", value: "" }])
-          }
+          onClick={() => {
+            markDirty();
+            setRows((previous) => [...previous, { item: "", value: "" }]);
+          }}
         >
           + Adicionar marcador
         </button>
         {error && (
-          <p className="error" role="alert">
+          <p className="error" role="alert" tabIndex={-1}>
             {error}
           </p>
         )}
