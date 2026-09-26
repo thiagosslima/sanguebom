@@ -1,6 +1,7 @@
 package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.exception.NotFoundException;
+import br.com.fiap.sanguebom.exception.ExamOwnerChangeException;
 import br.com.fiap.sanguebom.mapper.ExamAnalysisResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamMapper;
@@ -116,7 +117,6 @@ class ExamServiceUpdateTest {
     @DisplayName("update altera o exame do path, e nao insere um exame novo")
     void shouldMutateTheExamFromThePath() {
         given(examRepository.findById(EXAM_ID)).willReturn(Optional.of(existing));
-        given(userServiceHelper.getUserByIdOrFail(USER_ID)).willReturn(user);
         given(healthUnitRepository.findById(HEALTH_UNIT_ID)).willReturn(Optional.of(healthUnit));
 
         service.update(EXAM_ID, dto(USER_ID, HEALTH_UNIT_ID));
@@ -136,7 +136,6 @@ class ExamServiceUpdateTest {
     @DisplayName("update preserva os vinculos com cidadao e unidade de saude")
     void shouldKeepRelations() {
         given(examRepository.findById(EXAM_ID)).willReturn(Optional.of(existing));
-        given(userServiceHelper.getUserByIdOrFail(USER_ID)).willReturn(user);
         given(healthUnitRepository.findById(HEALTH_UNIT_ID)).willReturn(Optional.of(healthUnit));
 
         service.update(EXAM_ID, dto(USER_ID, HEALTH_UNIT_ID));
@@ -172,7 +171,6 @@ class ExamServiceUpdateTest {
     @DisplayName("update com unidade de saude inexistente falha com 404 e nao salva nada")
     void shouldFailWhenHealthUnitDoesNotExist() {
         given(examRepository.findById(EXAM_ID)).willReturn(Optional.of(existing));
-        given(userServiceHelper.getUserByIdOrFail(USER_ID)).willReturn(user);
         given(healthUnitRepository.findById(HEALTH_UNIT_ID)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(EXAM_ID, dto(USER_ID, HEALTH_UNIT_ID)))
@@ -181,4 +179,26 @@ class ExamServiceUpdateTest {
 
         then(examRepository).should(never()).save(org.mockito.ArgumentMatchers.any());
     }
+    @Test
+    @DisplayName("update rejeita troca de cidadao com 422 sem alterar nem salvar o exame")
+    void shouldRejectOwnerChangeWithoutMutatingExam() {
+        given(examRepository.findById(EXAM_ID)).willReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.update(EXAM_ID, dto(99L, HEALTH_UNIT_ID)))
+                .isInstanceOfSatisfying(ExamOwnerChangeException.class, exception -> {
+                    assertThat(exception.toProblemDetail().getStatus()).isEqualTo(422);
+                    assertThat(exception.toProblemDetail().getDetail())
+                            .isEqualTo(exception.getMessage());
+                });
+
+        assertThat(existing.getUser()).isSameAs(user);
+        assertThat(existing.getHealthUnit()).isSameAs(healthUnit);
+        assertThat(existing.getCollectedAt()).isEqualTo(COLLECTED_AT);
+        assertThat(existing.getStatus()).isEqualTo(ExamStatus.COLLECTED);
+        assertThat(existing.getExternalReference()).isEqualTo("LAB_ORIGINAL");
+        then(examRepository).should(never()).save(org.mockito.ArgumentMatchers.any());
+        then(userServiceHelper).shouldHaveNoInteractions();
+        then(healthUnitRepository).shouldHaveNoInteractions();
+    }
+
 }

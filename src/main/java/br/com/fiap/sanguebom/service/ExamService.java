@@ -1,6 +1,7 @@
 package br.com.fiap.sanguebom.service;
 
 import br.com.fiap.sanguebom.exception.DuplicatedExamResultException;
+import br.com.fiap.sanguebom.exception.ExamOwnerChangeException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.mapper.ExamAnalysisResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
@@ -278,17 +279,18 @@ public class ExamService {
         final Exam exam = examRepository.findById(id)
                 .orElseThrow(NotFoundException::new);
 
+        final Long currentUserId = exam.getUser() == null ? null : exam.getUser().getId();
+        if (examRecoverDTO.getUserId() != null
+                && !Objects.equals(examRecoverDTO.getUserId(), currentUserId)) {
+            throw new ExamOwnerChangeException();
+        }
+
+        final HealthUnit healthUnit = examRecoverDTO.getHealthUnitId() == null
+                ? exam.getHealthUnit()
+                : findHealthUnitOrFail(examRecoverDTO.getHealthUnitId());
+
         examMapper.updateEntity(exam, examRecoverDTO);
-
-        // O DTO nao valida os ids, entao uma associacao so e trocada quando vem informada.
-        // Do contrario o exame manteria o vinculo que ja tem.
-        if (examRecoverDTO.getUserId() != null) {
-            exam.setUser(userServiceHelper.getUserByIdOrFail(examRecoverDTO.getUserId()));
-        }
-
-        if (examRecoverDTO.getHealthUnitId() != null) {
-            exam.setHealthUnit(findHealthUnitOrFail(examRecoverDTO.getHealthUnitId()));
-        }
+        exam.setHealthUnit(healthUnit);
 
         examRepository.save(exam);
     }
