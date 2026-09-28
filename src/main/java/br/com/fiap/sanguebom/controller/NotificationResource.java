@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @Tag(name = "Notificações", description = "API para gerenciamento de notificações")
 @RequestMapping(value = "/api/notifications", produces = MediaType.APPLICATION_JSON_VALUE)

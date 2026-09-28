@@ -14,11 +14,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
-@Tag(name = "Catálogo público de exames",
-        description = "Itens de exame e faixas de referência vigentes usadas pelo sistema")
+@Validated
+@Tag(name = "Catálogo público de exames", description = "Itens de exame e faixas de referência vigentes usadas pelo sistema")
 public interface ExamItemCatalogResourceDocs {
 
     @Operation(

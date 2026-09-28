@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @RequestMapping(value = "/api/exams", produces = MediaType.APPLICATION_JSON_VALUE)
 public class ExamResource implements ExamResourceDocs {

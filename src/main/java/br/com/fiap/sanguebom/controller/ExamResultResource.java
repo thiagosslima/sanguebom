@@ -1,10 +1,8 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.config.swagger.docs.ExamResourceDocs;
 import br.com.fiap.sanguebom.config.swagger.docs.ExamResultResourceDocs;
 import br.com.fiap.sanguebom.model.dtos.ExamResultDTO;
 import br.com.fiap.sanguebom.service.ExamResultService;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -12,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 
 @RestController
 @RequestMapping(value = "/api/examResults", produces = MediaType.APPLICATION_JSON_VALUE)

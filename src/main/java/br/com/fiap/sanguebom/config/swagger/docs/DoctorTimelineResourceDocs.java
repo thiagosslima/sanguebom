@@ -13,10 +13,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.List;
 
+@Validated
 @Tag(name = "Médico", description = "Consultas longitudinais de exames para apoio ao atendimento")
 public interface DoctorTimelineResourceDocs {
 

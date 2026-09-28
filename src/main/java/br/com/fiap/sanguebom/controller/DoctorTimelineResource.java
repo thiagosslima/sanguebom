@@ -6,24 +6,18 @@ import br.com.fiap.sanguebom.model.doctor.MarkerTimelinePointDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.service.DoctorExamComparisonService;
 import br.com.fiap.sanguebom.service.DoctorTimelineService;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@Validated
 @RequestMapping(value = "/api/v1/doctor/patients/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
 public class DoctorTimelineResource implements DoctorTimelineResourceDocs {
 

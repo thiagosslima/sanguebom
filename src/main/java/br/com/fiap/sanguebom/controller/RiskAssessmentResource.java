@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-
 @RestController
 @Validated
 @Tag(name = "Avaliação de Risco", description = "API para gerenciamento de avaliações de risco")

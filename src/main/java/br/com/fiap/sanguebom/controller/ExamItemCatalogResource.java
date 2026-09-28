@@ -9,13 +9,11 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@Validated
 @RequestMapping(value = "/api/v1/exam-items", produces = MediaType.APPLICATION_JSON_VALUE)
 public class ExamItemCatalogResource implements ExamItemCatalogResourceDocs {
 

@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @Tag(name = "Intervalos de Referência", description = "API para gerenciamento de intervalos de referência")
 @RequestMapping(value = "/api/referenceRanges", produces = MediaType.APPLICATION_JSON_VALUE)

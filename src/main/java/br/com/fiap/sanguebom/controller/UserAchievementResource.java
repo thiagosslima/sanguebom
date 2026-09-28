@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @Tag(name = "Conquistas do Usuário", description = "API para gerenciamento de conquistas do usuário")
 @RequestMapping(value = "/api/userAchievements", produces = MediaType.APPLICATION_JSON_VALUE)

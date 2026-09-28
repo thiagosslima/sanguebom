@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @Tag(name = "Unidade de Saúde", description = "API para gerenciamento de unidades de saúde")
 @RequestMapping(value = "/api/healthUnits", produces = MediaType.APPLICATION_JSON_VALUE)

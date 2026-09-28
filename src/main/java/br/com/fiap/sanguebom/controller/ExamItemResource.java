@@ -3,7 +3,6 @@ package br.com.fiap.sanguebom.controller;
 import br.com.fiap.sanguebom.config.swagger.docs.ExamItemResourceDocs;
 import br.com.fiap.sanguebom.model.dtos.ExamItemDTO;
 import br.com.fiap.sanguebom.service.ExamItemService;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

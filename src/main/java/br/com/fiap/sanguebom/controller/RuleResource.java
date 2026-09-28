@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @Tag(name = "Regras", description = "API para gerenciamento de regras")
 @RequestMapping(value = "/api/rules", produces = MediaType.APPLICATION_JSON_VALUE)
