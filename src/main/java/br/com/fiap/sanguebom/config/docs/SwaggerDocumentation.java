@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.controller.doc;
+package br.com.fiap.sanguebom.config.docs;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
