@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.config.docs;
+package br.com.fiap.sanguebom.config.swagger.docs;
 
 import br.com.fiap.sanguebom.config.doc_helper.DefaultBadRequestApiResponse;
 import br.com.fiap.sanguebom.config.doc_helper.DefaultNotFoundApiResponse;

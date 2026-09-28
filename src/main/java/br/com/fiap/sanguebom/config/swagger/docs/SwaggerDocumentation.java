@@ -1,4 +1,4 @@
-package br.com.fiap.sanguebom.config.docs;
+package br.com.fiap.sanguebom.config.swagger.docs;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

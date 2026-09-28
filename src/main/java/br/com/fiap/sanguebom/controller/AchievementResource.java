@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.config.docs.AchievementResourceDocs;
+import br.com.fiap.sanguebom.config.swagger.docs.AchievementResourceDocs;
 import br.com.fiap.sanguebom.model.dtos.AchievementDTO;
 import br.com.fiap.sanguebom.service.AchievementService;
 import jakarta.validation.Valid;

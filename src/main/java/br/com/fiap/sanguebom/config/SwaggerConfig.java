@@ -1,6 +1,6 @@
 package br.com.fiap.sanguebom.config;
 
-import br.com.fiap.sanguebom.config.docs.SwaggerDocumentation;
+import br.com.fiap.sanguebom.config.swagger.docs.SwaggerDocumentation;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

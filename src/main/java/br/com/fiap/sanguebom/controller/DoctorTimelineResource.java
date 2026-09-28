@@ -1,13 +1,11 @@
 package br.com.fiap.sanguebom.controller;
 
-import br.com.fiap.sanguebom.config.docs.DoctorTimelineResourceDocs;
+import br.com.fiap.sanguebom.config.swagger.docs.DoctorTimelineResourceDocs;
 import br.com.fiap.sanguebom.model.doctor.ExamComparisonDTO;
 import br.com.fiap.sanguebom.model.doctor.MarkerTimelinePointDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.service.DoctorExamComparisonService;
 import br.com.fiap.sanguebom.service.DoctorTimelineService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
