@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -35,7 +37,8 @@ public interface ExamItemCatalogResourceDocs {
     )
     @DefaultBadRequestApiResponse
     @DefaultNotFoundApiResponse
-    ResponseEntity<PageResponse<ExamItemCatalogDTO>> getExamItems(String category, int page, int size);
+    ResponseEntity<PageResponse<ExamItemCatalogDTO>> getExamItems(
+            String category, @Min(0) int page, @Min(1) @Max(100) int size);
 
     @Operation(
             summary = "Lista faixas de referência vigentes por item",

@@ -11,6 +11,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -38,7 +41,8 @@ public interface DoctorTimelineResourceDocs {
     @DefaultBadRequestApiResponse
     @DefaultNotFoundApiResponse
     ResponseEntity<PageResponse<MarkerTimelinePointDTO>> getTimeline(
-            Long userId, String itemCode, LocalDate from, LocalDate to, int page, int size);
+            Long userId, @NotBlank String itemCode, LocalDate from, LocalDate to,
+            @Min(0) int page, @Min(1) @Max(100) int size);
 
     @Operation(
             summary = "Comparação lado a lado de exames",

@@ -5,8 +5,6 @@ import br.com.fiap.sanguebom.model.catalog.ExamItemCatalogDTO;
 import br.com.fiap.sanguebom.model.catalog.ReferenceRangeCatalogDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.service.ExamItemService;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,8 +25,8 @@ public class ExamItemCatalogResource implements ExamItemCatalogResourceDocs {
     @Override
     public ResponseEntity<PageResponse<ExamItemCatalogDTO>> getExamItems(
             @RequestParam(name = "category", required = false) final String category,
-            @RequestParam(name = "page", defaultValue = "0") @Min(0) final int page,
-            @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) final int size) {
+            @RequestParam(name = "page", defaultValue = "0") final int page,
+            @RequestParam(name = "size", defaultValue = "10") final int size) {
         return ResponseEntity.ok(examItemService.findActiveCatalogItems(category, page, size));
     }
 

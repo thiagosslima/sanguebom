@@ -6,9 +6,6 @@ import br.com.fiap.sanguebom.model.doctor.MarkerTimelinePointDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.service.DoctorExamComparisonService;
 import br.com.fiap.sanguebom.service.DoctorTimelineService;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,13 +31,13 @@ public class DoctorTimelineResource implements DoctorTimelineResourceDocs {
     @Override
     public ResponseEntity<PageResponse<MarkerTimelinePointDTO>> getTimeline(
             @PathVariable(name = "userId") final Long userId,
-            @RequestParam(name = "itemCode") @NotBlank final String itemCode,
+            @RequestParam(name = "itemCode") final String itemCode,
             @RequestParam(name = "from", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate from,
             @RequestParam(name = "to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate to,
-            @RequestParam(name = "page", defaultValue = "0") @Min(0) final int page,
-            @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(100) final int size) {
+            @RequestParam(name = "page", defaultValue = "0") final int page,
+            @RequestParam(name = "size", defaultValue = "10") final int size) {
         return ResponseEntity.ok(doctorTimelineService.timeline(userId, itemCode, from, to, page, size));
     }
 
