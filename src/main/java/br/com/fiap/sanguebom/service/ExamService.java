@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.service;
 
+import br.com.fiap.sanguebom.exception.DuplicatedExamResultException;
 import br.com.fiap.sanguebom.exception.NotFoundException;
 import br.com.fiap.sanguebom.mapper.ExamAnalysisResultMapper;
 import br.com.fiap.sanguebom.mapper.ExamIResultMapper;
@@ -10,11 +11,14 @@ import br.com.fiap.sanguebom.model.entities.*;
 import br.com.fiap.sanguebom.model.enums.ExamResultFlag;
 import br.com.fiap.sanguebom.model.enums.ExamStatus;
 import br.com.fiap.sanguebom.repository.*;
-import br.com.fiap.sanguebom.rulesMotor.ExamAnalysisService;
-import org.springframework.context.ApplicationEventPublisher;
+import br.com.fiap.sanguebom.rulesMotor.achievement.AchievementEvaluator;
+import br.com.fiap.sanguebom.rulesMotor.exam.ExamAnalysisService;
+import br.com.fiap.sanguebom.service.notification.ExamNotificationService;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,7 +29,6 @@ public class ExamService {
     private final ExamRepository examRepository;
     private final AppUserRepository appUserRepository;
     private final HealthUnitRepository healthUnitRepository;
-    private final ApplicationEventPublisher publisher;
     private final UserServiceHelper userServiceHelper;
     private final ExamItemRepository examItemRepository;
     private final ExamResultRepository examResultRepository;
@@ -35,6 +38,9 @@ public class ExamService {
     private final RiskAssessmentService riskAssessmentService;
     private final ExamAnalysisService examAnalysisService;
     private final ExamAnalysisResultMapper examAnalysisResultMapper;
+    private final AchievementEvaluator achievementEvaluator;
+    private final ExamNotificationService examNotificationService;
+    private final Clock clock;
 
     private final ExamMapper examMapper;
     private final ExamIResultMapper examIResultMapper;
@@ -42,7 +48,6 @@ public class ExamService {
     public ExamService(final ExamRepository examRepository,
                        final AppUserRepository appUserRepository,
                        final HealthUnitRepository healthUnitRepository,
-                       final ApplicationEventPublisher publisher,
                        final UserServiceHelper userServiceHelper,
                        final ExamItemRepository examItemRepository,
                        final ExamMapper examMapper,
@@ -52,12 +57,14 @@ public class ExamService {
                        final RiskAssessmentRepository riskAssessmentRepository,
                        final RiskAssessmentService riskAssessmentService,
                        final ExamAnalysisService examAnalysisService,
-                       ExamIResultMapper examIResultMapper,
-                       ExamAnalysisResultMapper examAnalysisResultMapper) {
+                       final AchievementEvaluator achievementEvaluator,
+                       final ExamIResultMapper examIResultMapper,
+                       final ExamAnalysisResultMapper examAnalysisResultMapper,
+                       final ExamNotificationService examNotificationService,
+                       final Clock clock) {
         this.examRepository = examRepository;
         this.appUserRepository = appUserRepository;
         this.healthUnitRepository = healthUnitRepository;
-        this.publisher = publisher;
         this.userServiceHelper = userServiceHelper;
         this.examItemRepository = examItemRepository;
         this.examMapper = examMapper;
@@ -69,27 +76,30 @@ public class ExamService {
         this.riskAssessmentService = riskAssessmentService;
         this.examAnalysisService = examAnalysisService;
         this.examAnalysisResultMapper = examAnalysisResultMapper;
+        this.achievementEvaluator = achievementEvaluator;
+        this.examNotificationService = examNotificationService;
+        this.clock = clock;
     }
 
     public List<ExamRecoverDTO> findAll() {
         final List<Exam> exams = examRepository.findAll(Sort.by("id"));
         return exams.stream()
-                .map(exam -> examMapper.toDTO(exam))
+                .map(examMapper::toDTO)
                 .toList();
     }
 
     public ExamRecoverDTO get(final Long id) {
         return examRepository.findById(id)
-                .map(exam -> examMapper.toDTO(exam))
+                .map(examMapper::toDTO)
                 .orElseThrow(NotFoundException::new);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ExamAnalysisResultDTO create(final ExamCreateDTO examDTO) {
 
-        ExamCreationContext context = loadContext(examDTO);
-
         validateExamResults(examDTO.analyzedItems());
+
+        ExamCreationContext context = loadContext(examDTO);
 
         Exam exam = createExam(examDTO, context);
 
@@ -98,6 +108,8 @@ public class ExamService {
                 examDTO.analyzedItems(),
                 context.examItems()
         );
+
+        examInAnalysis(exam);
 
         ExamAnalysisScore analysisResult =
                 examAnalysisService.analyze(
@@ -115,9 +127,25 @@ public class ExamService {
 
         RiskAssessment savedRA = riskAssessmentRepository.save(riskAssessment);
 
+        finishExamAnalysis(exam);
+
+        examNotificationService.notifyResultAvailable(exam);
+
+        achievementEvaluator.evaluate(context.user(), exam, riskAssessment);
 
         return examAnalysisResultMapper.fromRiskAssessmentToAnalysisResult(savedRA);
 
+    }
+
+    private void finishExamAnalysis(Exam exam) {
+        exam.setStatus(ExamStatus.RELEASED);
+        exam.setReleasedAt(OffsetDateTime.now(clock));
+        examRepository.save(exam);
+    }
+
+    private void examInAnalysis(Exam exam) {
+        exam.setStatus(ExamStatus.IN_ANALYSIS);
+        examRepository.save(exam);
     }
 
     private void validateExamResults(List<ExamResultDTO> examResults) {
@@ -231,19 +259,16 @@ public class ExamService {
 
 
 
-    private static void throwCaseThereAreDuplicatedExamResult(List<ExamResultDTO> examResultList) {
+    private void throwCaseThereAreDuplicatedExamResult(List<ExamResultDTO> examResultList) {
         Set<Long> examResultsIds = examResultList.stream()
                 .map(ExamResultDTO::examItemId)
                 .collect(Collectors.toSet());
 
         if(examResultsIds.size() != examResultList.size()){
-            throw new IllegalArgumentException("Não pode haver itens de exame duplicados");
+            throw new DuplicatedExamResultException("Não pode haver itens de exame duplicados");
         }
     }
 
-    private void checkIfAllExamItemsExist(List<ExamResultDTO> examResultList) {
-
-    }
 
     public void update(final Long id, final ExamRecoverDTO examRecoverDTO) {
         examRepository.findById(id)

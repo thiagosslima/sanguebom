@@ -16,6 +16,8 @@
     <properties>
         <java.version>21</java.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
+        <jacoco.version>0.8.13</jacoco.version>
+        <spotbugs.plugin.version>4.9.8.0</spotbugs.plugin.version>
     </properties>
 
     <dependencies>
@@ -137,6 +139,46 @@
                             <version>0.2.0</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- Cobertura de codigo. O relatorio XML alimenta o gate de 80%
+                 das linhas novas do PR, aplicado no workflow de CI. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Analise estatica. Nao esta ligado a nenhuma fase do lifecycle:
+                 e chamado explicitamente por `mvn spotbugs:spotbugs` no workflow
+                 static-analysis, para nao pesar no build local nem no de testes. -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs.plugin.version}</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Medium</threshold>
+                    <sarifOutput>true</sarifOutput>
+                    <failOnError>false</failOnError>
+                    <includeTests>false</includeTests>
+                    <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
             </plugin>
         </plugins>

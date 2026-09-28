@@ -1,6 +1,6 @@
 # --- 1. Etapa de Build ---
 # Usa uma imagem com Maven ja instalado para compilar o projeto
-FROM maven:3.9.9-amazoncorretto-21-alpine as build
+FROM maven:3.9.9-amazoncorretto-21-alpine AS build
 
 WORKDIR /app
 
@@ -9,8 +9,11 @@ COPY src ./src
 
 RUN mvn dependency:go-offline
 
-# Compila o projeto e cria o JAR. Os testes são pulados, pois não temos um banco de dados aqui.
-RUN mvn package -DskipTests
+# Compila o projeto e cria o JAR. Usa maven.test.skip em vez de skipTests
+# porque skipTests ainda COMPILA o código de teste: a imagem de runtime
+# passaria a depender dele, e um teste que não compila quebraria o deploy.
+# Quem executa os testes é o workflow de CI, com um banco de verdade.
+RUN mvn package -Dmaven.test.skip=true
 
 # --- 2. Etapa Final ---
 # Usa uma imagem JRE (Java Runtime Environment) muito menor, apenas para executar a aplicação
@@ -28,6 +31,10 @@ WORKDIR /app
 
 # Copia o JAR da etapa de build para a imagem final, já com o usuário e grupo corretos
 COPY --from=build --chown=appuser:appgroup /app/target/*.jar app.jar
+
+# Porta padrão da aplicação. Em hosts que injetam $PORT (Render), o
+# server.port do application.properties assume o valor injetado.
+EXPOSE 8080
 
 # Comando para executar a aplicação quando o container iniciar
 ENTRYPOINT ["java", "-jar", "app.jar"]

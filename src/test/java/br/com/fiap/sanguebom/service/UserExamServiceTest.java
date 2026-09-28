@@ -81,7 +81,7 @@ class UserExamServiceTest {
         messageSource.addMessage("exam.medical-disclaimer", LOCALE, DISCLAIMER);
         // mapper real, para o mapeamento ser de fato exercitado
         service = new UserExamService(examRepository, examResultRepository,
-                Mappers.getMapper(UserExamMapper.class), messageSource);
+                Mappers.getMapper(UserExamMapper.class), new MessageService(messageSource));
     }
 
     // ---------------------------------------------------------------- CF-332

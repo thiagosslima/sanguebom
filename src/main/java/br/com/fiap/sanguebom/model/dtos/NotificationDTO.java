@@ -1,5 +1,7 @@
 package br.com.fiap.sanguebom.model.dtos;
 
+import br.com.fiap.sanguebom.model.enums.NotificationStatus;
+import br.com.fiap.sanguebom.model.enums.NotificationType;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,8 +15,7 @@ public class NotificationDTO {
 
     private Long id;
 
-    @Size(max = 30)
-    private String type;
+    private NotificationType type;
 
     @Size(max = 200)
     private String title;
@@ -25,8 +26,10 @@ public class NotificationDTO {
 
     private OffsetDateTime sentAt;
 
-    @Size(max = 30)
-    private String status;
+    private NotificationStatus status;
+
+    @Size(max = 120)
+    private String referenceKey;
 
     private OffsetDateTime createdAt;
 

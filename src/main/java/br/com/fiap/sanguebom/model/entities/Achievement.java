@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.entities;
 
+import br.com.fiap.sanguebom.model.enums.AchivementCode;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +34,8 @@ public class Achievement {
     private Long id;
 
     @Column(length = 50)
-    private String code;
+    @Enumerated(EnumType.STRING)
+    private AchivementCode code;
 
     @Column(length = 100)
     private String name;
@@ -49,5 +51,5 @@ public class Achievement {
     private OffsetDateTime createdAt;
 
     @OneToMany(mappedBy = "achievement")
-    private Set<UserAchievement> achievementUserAchievements = new HashSet<>();
+    private Set<UserAchievement> userAchievements = new HashSet<>();
 }

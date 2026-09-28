@@ -23,7 +23,6 @@ public class RiskAssessmentDTO {
     @Schema(type = "string", example = "34.08")
     private BigDecimal score;
 
-    @Size(max = 30)
     private RiskAssessmentLevel level;
 
     @Size(max = 30)

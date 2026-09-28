@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.model.entities;
 
+import br.com.fiap.sanguebom.model.enums.ExamPeriodicity;
 import br.com.fiap.sanguebom.model.enums.Sex;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -50,7 +51,8 @@ public class HealthProfile {
     private String riskFactors;
 
     @Column(nullable = false, length = 20)
-    private String examPeriodicity;
+    @Enumerated(EnumType.STRING)
+    private ExamPeriodicity examPeriodicity;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

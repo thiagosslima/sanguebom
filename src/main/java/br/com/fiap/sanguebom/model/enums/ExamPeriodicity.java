@@ -15,16 +15,4 @@ public enum ExamPeriodicity {
     public int months() {
         return months;
     }
-
-    public static ExamPeriodicity from(final String value) {
-        if (value == null) {
-            return YEARLY;
-        }
-        for (final ExamPeriodicity periodicity : values()) {
-            if (periodicity.name().equalsIgnoreCase(value.trim())) {
-                return periodicity;
-            }
-        }
-        return YEARLY;
-    }
 }
