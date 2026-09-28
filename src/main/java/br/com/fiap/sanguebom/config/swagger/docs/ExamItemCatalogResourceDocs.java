@@ -24,7 +24,6 @@ public interface ExamItemCatalogResourceDocs {
     @Operation(
             summary = "Lista itens de exame ativos",
             description = "Consulta pública paginada dos itens de exame disponíveis no catálogo do sistema.")
-    @SwaggerDocumentation("exam-item-catalog/listar-itens.md")
     @ApiResponse(
             responseCode = "200",
             description = "Lista de itens de exame retornada com sucesso.",
@@ -41,7 +40,6 @@ public interface ExamItemCatalogResourceDocs {
             summary = "Lista faixas de referência vigentes por item",
             description = "Consulta pública das faixas de referência que o sistema usa hoje, "
                     + "incluindo a fonte e as regras numéricas associadas.")
-    @SwaggerDocumentation("exam-item-catalog/listar-faixas-referencia.md")
     @ApiResponse(
             responseCode = "200",
             description = "Lista de faixas de referência retornada com sucesso.",

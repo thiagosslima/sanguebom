@@ -25,7 +25,6 @@ public interface DoctorTimelineResourceDocs {
             description = "Retorna uma página da série histórica de um marcador do paciente, "
                     + "com valor, unidade, classificação e faixa de referência vigente em cada data."
     )
-    @SwaggerDocumentation("doctor/linha-do-tempo.md")
     @ApiResponse(
             responseCode = "200",
             description = "Página da evolução temporal do marcador retornada com sucesso.",
@@ -44,7 +43,6 @@ public interface DoctorTimelineResourceDocs {
             description = "Retorna os itens medidos em dois ou mais exames do paciente, "
                     + "com valores lado a lado e variações absoluta e percentual entre exames consecutivos."
     )
-    @SwaggerDocumentation("doctor/comparar-exames.md")
     @ApiResponse(
             responseCode = "200",
             description = "Página da comparação de exames retornada com sucesso.",

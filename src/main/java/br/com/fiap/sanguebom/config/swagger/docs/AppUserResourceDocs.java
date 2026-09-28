@@ -21,7 +21,6 @@ public interface AppUserResourceDocs {
             summary = "Listar todos os usuários do aplicativo",
             description = "Retorna uma lista de todos os usuários do aplicativo cadastrados no sistema."
     )
-    @SwaggerDocumentation("app-users/listar-cidadaos.md")
     @ApiResponse(
             responseCode = "200",
             description = "Lista de usuários retornada com sucesso.",
@@ -36,7 +35,6 @@ public interface AppUserResourceDocs {
             summary = "Buscar usuário por ID",
             description = "Retorna os detalhes de um usuário específico com base no ID fornecido."
     )
-    @SwaggerDocumentation("app-users/buscar-cidadao.md")
     @ApiResponse(
             responseCode = "200",
             description = "Usuário encontrado com sucesso.",
@@ -53,7 +51,6 @@ public interface AppUserResourceDocs {
             summary = "Criar novo usuário do aplicativo",
             description = "Cria um novo usuário do aplicativo com base nos dados fornecidos."
     )
-    @SwaggerDocumentation("app-users/criar-cidadao.md")
     @ApiResponse(
             responseCode = "201",
             description = "Usuário criado com sucesso - Retorna o ID do novo usuário",
@@ -69,7 +66,6 @@ public interface AppUserResourceDocs {
             summary = "Atualizar usuário do aplicativo",
             description = "Atualiza os dados de um usuário existente com base no ID fornecido."
     )
-    @SwaggerDocumentation("app-users/atualizar-cidadao.md")
     @ApiResponse(
             responseCode = "200",
             description = "Usuário atualizado com sucesso - Retorna o ID do usuário atualizado",

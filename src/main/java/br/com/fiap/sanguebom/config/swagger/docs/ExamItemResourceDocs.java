@@ -21,7 +21,6 @@ public interface ExamItemResourceDocs {
             summary = "Listar todos os itens de exame",
             description = "Retorna uma lista de todos os itens de exame disponíveis."
     )
-    @SwaggerDocumentation("exam-item/listar-itens-de-exame.md")
     @ApiResponse(
             responseCode = "200",
             description = "Lista de itens de exame retornada com sucesso.",
@@ -37,7 +36,6 @@ public interface ExamItemResourceDocs {
             summary = "Buscar item de exame por ID",
             description = "Retorna os detalhes de um item de exame específico com base no ID fornecido."
     )
-    @SwaggerDocumentation("exam-item/buscar-item-de-exame.md")
     @ApiResponse(
             responseCode = "200",
             description = "Item de exame retornado com sucesso.",
@@ -53,7 +51,6 @@ public interface ExamItemResourceDocs {
             summary = "Criar novo item de exame",
             description = "Cria um novo item de exame com base nos dados fornecidos."
     )
-    @SwaggerDocumentation("exam-item/criar-item-de-exame.md")
     @ApiResponse(
             responseCode = "201",
             description = "Item de exame criado com sucesso - Retorna o ID do novo item de exame",
@@ -69,7 +66,6 @@ public interface ExamItemResourceDocs {
             summary = "Atualizar item de exame",
             description = "Atualiza os dados de um item de exame existente com base no ID fornecido."
     )
-    @SwaggerDocumentation("exam-item/atualizar-item-de-exame.md")
     @ApiResponse(
             responseCode = "200",
             description = "Item de exame atualizado com sucesso - Retorna o ID do item de exame atualizado",
