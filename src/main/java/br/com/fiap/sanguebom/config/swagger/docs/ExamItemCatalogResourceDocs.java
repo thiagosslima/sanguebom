@@ -1,5 +1,8 @@
 package br.com.fiap.sanguebom.config.swagger.docs;
 
+import br.com.fiap.sanguebom.config.doc_helper.DefaultBadRequestApiResponse;
+import br.com.fiap.sanguebom.config.doc_helper.DefaultNotFoundApiResponse;
+import br.com.fiap.sanguebom.config.swagger.schema.ExamItemCatalogResponseSchema;
 import br.com.fiap.sanguebom.model.catalog.ExamItemCatalogDTO;
 import br.com.fiap.sanguebom.model.catalog.ReferenceRangeCatalogDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
@@ -27,9 +30,11 @@ public interface ExamItemCatalogResourceDocs {
             description = "Lista de itens de exame retornada com sucesso.",
             content = @Content(
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    array = @ArraySchema(schema = @Schema(implementation = ExamItemCatalogDTO.class))
+                    schema = @Schema(implementation = ExamItemCatalogResponseSchema.class)
             )
     )
+    @DefaultBadRequestApiResponse
+    @DefaultNotFoundApiResponse
     ResponseEntity<PageResponse<ExamItemCatalogDTO>> getExamItems(String category, int page, int size);
 
     @Operation(
@@ -45,5 +50,7 @@ public interface ExamItemCatalogResourceDocs {
                     array = @ArraySchema(schema = @Schema(implementation = ReferenceRangeCatalogDTO.class))
             )
     )
+    @DefaultBadRequestApiResponse
+    @DefaultNotFoundApiResponse
     ResponseEntity<List<ReferenceRangeCatalogDTO>> getReferenceRanges(String code);
 }
