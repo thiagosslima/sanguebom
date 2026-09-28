@@ -3,6 +3,7 @@ package br.com.fiap.sanguebom.controller;
 import br.com.fiap.sanguebom.model.dtos.HealthUnitDTO;
 import br.com.fiap.sanguebom.service.HealthUnitService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,6 +14,7 @@ import java.util.List;
 
 
 @RestController
+@Tag(name = "Unidade de Saúde", description = "API para gerenciamento de unidades de saúde")
 @RequestMapping(value = "/api/healthUnits", produces = MediaType.APPLICATION_JSON_VALUE)
 public class HealthUnitResource {
 
