@@ -1,5 +1,6 @@
 package br.com.fiap.sanguebom.controller;
 
+import br.com.fiap.sanguebom.config.docs.DoctorTimelineResourceDocs;
 import br.com.fiap.sanguebom.model.doctor.ExamComparisonDTO;
 import br.com.fiap.sanguebom.model.doctor.MarkerTimelinePointDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
@@ -25,9 +26,8 @@ import java.util.List;
 
 @RestController
 @Validated
-@Tag(name = "Médico", description = "Consultas longitudinais de exames para apoio ao atendimento")
 @RequestMapping(value = "/api/v1/doctor/patients/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
-public class DoctorTimelineResource {
+public class DoctorTimelineResource implements DoctorTimelineResourceDocs {
 
     private final DoctorTimelineService doctorTimelineService;
     private final DoctorExamComparisonService doctorExamComparisonService;
@@ -39,9 +39,7 @@ public class DoctorTimelineResource {
     }
 
     @GetMapping("/timeline")
-    @Operation(summary = "Evolução temporal de um marcador",
-            description = "Retorna uma página da série histórica de um marcador do paciente, "
-                    + "com valor, unidade, classificação e faixa de referência vigente em cada data.")
+    @Override
     public ResponseEntity<PageResponse<MarkerTimelinePointDTO>> getTimeline(
             @PathVariable(name = "userId") final Long userId,
             @RequestParam(name = "itemCode") @NotBlank final String itemCode,
@@ -55,9 +53,7 @@ public class DoctorTimelineResource {
     }
 
     @GetMapping("/exams/compare")
-    @Operation(summary = "Comparação lado a lado de exames",
-            description = "Retorna os itens medidos em dois ou mais exames do paciente, "
-                    + "com valores lado a lado e variações absoluta e percentual entre exames consecutivos.")
+    @Override
     public ResponseEntity<ExamComparisonDTO> compareExams(
             @PathVariable(name = "userId") final Long userId,
             @RequestParam(name = "examIds") final List<Long> examIds) {
