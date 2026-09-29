@@ -3,6 +3,7 @@ package br.com.fiap.sanguebom.controller;
 import br.com.fiap.sanguebom.model.dtos.ReferenceRangeDTO;
 import br.com.fiap.sanguebom.service.ReferenceRangeService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,8 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
+@Tag(name = "Intervalos de Referência", description = "API para gerenciamento de intervalos de referência")
 @RequestMapping(value = "/api/referenceRanges", produces = MediaType.APPLICATION_JSON_VALUE)
 public class ReferenceRangeResource {
 

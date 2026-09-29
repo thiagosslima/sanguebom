@@ -1,8 +1,8 @@
 package br.com.fiap.sanguebom.controller;
 
+import br.com.fiap.sanguebom.config.swagger.docs.AchievementResourceDocs;
 import br.com.fiap.sanguebom.model.dtos.AchievementDTO;
 import br.com.fiap.sanguebom.service.AchievementService;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/api/achievements", produces = MediaType.APPLICATION_JSON_VALUE)
-public class AchievementResource {
+public class AchievementResource implements AchievementResourceDocs {
 
     private final AchievementService achievementService;
 
@@ -23,17 +23,19 @@ public class AchievementResource {
     }
 
     @GetMapping
+    @Override
     public ResponseEntity<List<AchievementDTO>> getAllAchievements() {
         return ResponseEntity.ok(achievementService.findAll());
     }
 
     @GetMapping("/{id}")
+    @Override
     public ResponseEntity<AchievementDTO> getAchievement(@PathVariable(name = "id") final Long id) {
         return ResponseEntity.ok(achievementService.get(id));
     }
 
     @PostMapping
-    @ApiResponse(responseCode = "201")
+    @Override
     public ResponseEntity<Long> createAchievement(
             @RequestBody @Valid final AchievementDTO achievementDTO) {
         final Long createdId = achievementService.create(achievementDTO);
@@ -41,6 +43,7 @@ public class AchievementResource {
     }
 
     @PutMapping("/{id}")
+    @Override
     public ResponseEntity<Long> updateAchievement(@PathVariable(name = "id") final Long id,
             @RequestBody @Valid final AchievementDTO achievementDTO) {
         achievementService.update(id, achievementDTO);

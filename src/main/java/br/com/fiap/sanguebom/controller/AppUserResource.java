@@ -1,8 +1,8 @@
 package br.com.fiap.sanguebom.controller;
 
+import br.com.fiap.sanguebom.config.swagger.docs.AppUserResourceDocs;
 import br.com.fiap.sanguebom.model.dtos.AppUserDTO;
 import br.com.fiap.sanguebom.service.AppUserService;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/api/appUsers", produces = MediaType.APPLICATION_JSON_VALUE)
-public class AppUserResource {
+public class AppUserResource implements AppUserResourceDocs {
 
     private final AppUserService appUserService;
 
@@ -23,23 +23,26 @@ public class AppUserResource {
     }
 
     @GetMapping
+    @Override
     public ResponseEntity<List<AppUserDTO>> getAllAppUsers() {
         return ResponseEntity.ok(appUserService.findAll());
     }
 
     @GetMapping("/{id}")
+    @Override
     public ResponseEntity<AppUserDTO> getAppUser(@PathVariable(name = "id") final Long id) {
         return ResponseEntity.ok(appUserService.get(id));
     }
 
     @PostMapping
-    @ApiResponse(responseCode = "201")
+    @Override
     public ResponseEntity<Long> createAppUser(@RequestBody @Valid final AppUserDTO appUserDTO) {
         final Long createdId = appUserService.create(appUserDTO);
         return new ResponseEntity<>(createdId, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
+    @Override
     public ResponseEntity<Long> updateAppUser(@PathVariable(name = "id") final Long id,
                                               @RequestBody @Valid final AppUserDTO appUserDTO) {
         appUserService.update(id, appUserDTO);

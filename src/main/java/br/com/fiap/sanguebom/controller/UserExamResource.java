@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Locale;
 
-
 @RestController
 @Validated
 @Tag(name = "Exames do usuário", description = "Meta de exames, histórico e detalhe do exame do cidadão")

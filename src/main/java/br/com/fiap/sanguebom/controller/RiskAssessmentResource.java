@@ -5,6 +5,7 @@ import br.com.fiap.sanguebom.model.riskAssessment.RiskTimelinePointDTO;
 import br.com.fiap.sanguebom.model.userexam.PageResponse;
 import br.com.fiap.sanguebom.service.RiskAssessmentService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -17,9 +18,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-
 @RestController
 @Validated
+@Tag(name = "Avaliação de Risco", description = "API para gerenciamento de avaliações de risco")
 @RequestMapping(value = "/api/riskAssessments", produces = MediaType.APPLICATION_JSON_VALUE)
 public class RiskAssessmentResource {
 

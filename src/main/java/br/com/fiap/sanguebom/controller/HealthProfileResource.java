@@ -3,6 +3,7 @@ package br.com.fiap.sanguebom.controller;
 import br.com.fiap.sanguebom.model.dtos.HealthProfileDTO;
 import br.com.fiap.sanguebom.service.HealthProfileService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,8 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
+@Tag(name = "Perfil de Saúde", description = "API para gerenciamento de perfis de saúde")
 @RequestMapping(value = "/api/healthProfiles", produces = MediaType.APPLICATION_JSON_VALUE)
 public class HealthProfileResource {
 
@@ -48,3 +49,6 @@ public class HealthProfileResource {
         return ResponseEntity.ok(id);
     }
 }
+
+
+

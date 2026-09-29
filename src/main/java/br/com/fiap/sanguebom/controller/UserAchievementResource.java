@@ -3,6 +3,7 @@ package br.com.fiap.sanguebom.controller;
 import br.com.fiap.sanguebom.model.dtos.UserAchievementDTO;
 import br.com.fiap.sanguebom.service.UserAchievementService;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,8 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
+@Tag(name = "Conquistas do Usuário", description = "API para gerenciamento de conquistas do usuário")
 @RequestMapping(value = "/api/userAchievements", produces = MediaType.APPLICATION_JSON_VALUE)
 public class UserAchievementResource {
 
