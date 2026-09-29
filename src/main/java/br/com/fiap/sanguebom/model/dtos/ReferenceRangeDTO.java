@@ -4,6 +4,7 @@ import br.com.fiap.sanguebom.model.enums.Sex;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,7 +20,7 @@ public class ReferenceRangeDTO {
 
     private Long id;
 
-    @Size(max = 20)
+    @NotNull
     private Sex sex;
 
     @Digits(integer = 5, fraction = 2)

@@ -6,12 +6,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(properties = "spring.docker.compose.enabled=false")
 @Transactional
@@ -30,9 +32,27 @@ class ReferenceRangeRepositoryTest {
     }
 
     @Test
-    void nullRangeRemainsApplicableToEveryPatientSex() {
-        jdbc.update("UPDATE reference_range SET sex = NULL WHERE id = 1");
-        assertUniversalRange(null);
+    void migrationConvertsExistingNullSexToAll() {
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM reference_range WHERE sex IS NULL", Long.class)).isZero();
+        assertThat(jdbc.queryForList("""
+                SELECT rr.sex FROM reference_range rr
+                JOIN exam_item ei ON ei.id = rr.exam_item_id
+                WHERE ei.code IN ('GLUCOSE', 'HBA1C', 'INSULIN')
+                """, String.class)).hasSize(3).containsOnly("ALL");
+    }
+
+    @Test
+    void databaseRejectsNullSex() {
+        assertThatThrownBy(() -> jdbc.update("UPDATE reference_range SET sex = NULL WHERE id = 1"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void timelineStillAcceptsUnknownPatientSex() {
+        assertThat(repository.findApplicableRangeForTimeline(
+                1L, null, BigDecimal.valueOf(40), LocalDate.of(2026, 9, 29)))
+                .extracting(ReferenceRange::getId).containsExactly(1L);
     }
 
     @Test

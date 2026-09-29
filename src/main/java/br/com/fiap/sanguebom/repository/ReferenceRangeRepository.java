@@ -20,7 +20,7 @@ public interface ReferenceRangeRepository extends JpaRepository<ReferenceRange, 
         SELECT rr from ReferenceRange  rr
         WHERE rr.examItem.id = :examItemId
         AND (
-            rr.sex IS NULL OR rr.sex = Sex.ALL OR rr.sex = :sex
+            rr.sex = Sex.ALL OR rr.sex = :sex
         )
         AND (
             rr.ageMinYears is NULL or rr.ageMinYears <= :age
@@ -41,7 +41,7 @@ public interface ReferenceRangeRepository extends JpaRepository<ReferenceRange, 
             WHERE rr.examItem.id = :examItemId
             AND (rr.validFrom IS NULL OR rr.validFrom <= :currentDate)
             AND (rr.validUntil IS NULL OR rr.validUntil >= :currentDate)
-            ORDER BY rr.sex ASC NULLS FIRST, rr.ageMinYears ASC NULLS FIRST, rr.ageMaxYears ASC NULLS LAST, rr.version DESC
+            ORDER BY rr.sex ASC, rr.ageMinYears ASC NULLS FIRST, rr.ageMaxYears ASC NULLS LAST, rr.version DESC
             """)
     List<ReferenceRange> findCurrentRangesByExamItemId(
             @Param("examItemId") Long examItemId,
@@ -52,7 +52,7 @@ public interface ReferenceRangeRepository extends JpaRepository<ReferenceRange, 
     @Query("""
             SELECT rr FROM ReferenceRange rr
             WHERE rr.examItem.id = :examItemId
-            AND (:sex IS NULL OR rr.sex IS NULL OR rr.sex = Sex.ALL OR rr.sex = :sex)
+            AND (:sex IS NULL OR rr.sex = Sex.ALL OR rr.sex = :sex)
             AND (
                 (:age IS NULL AND rr.ageMinYears IS NULL AND rr.ageMaxYears IS NULL)
                 OR (:age IS NOT NULL

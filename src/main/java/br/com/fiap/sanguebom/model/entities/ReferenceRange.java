@@ -35,7 +35,7 @@ public class ReferenceRange {
     )
     private Long id;
 
-    @Column(length = 20)
+    @Column(length = 20, nullable = false)
     @Enumerated(EnumType.STRING)
     private Sex sex;
 
