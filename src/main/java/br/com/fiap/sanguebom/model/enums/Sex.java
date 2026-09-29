@@ -5,6 +5,8 @@ public enum Sex {
     M,
     F,
 
+    ALL,
+
     @Deprecated
     MALE,
 

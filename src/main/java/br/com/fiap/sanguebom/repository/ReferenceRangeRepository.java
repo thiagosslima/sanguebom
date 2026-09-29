@@ -20,7 +20,7 @@ public interface ReferenceRangeRepository extends JpaRepository<ReferenceRange, 
         SELECT rr from ReferenceRange  rr
         WHERE rr.examItem.id = :examItemId
         AND (
-            rr.sex is NULL or rr.sex = :sex
+            rr.sex IS NULL OR rr.sex = Sex.ALL OR rr.sex = :sex
         )
         AND (
             rr.ageMinYears is NULL or rr.ageMinYears <= :age
@@ -52,7 +52,7 @@ public interface ReferenceRangeRepository extends JpaRepository<ReferenceRange, 
     @Query("""
             SELECT rr FROM ReferenceRange rr
             WHERE rr.examItem.id = :examItemId
-            AND (:sex IS NULL OR rr.sex IS NULL OR rr.sex = :sex)
+            AND (:sex IS NULL OR rr.sex IS NULL OR rr.sex = br.com.fiap.sanguebom.model.enums.Sex.ALL OR rr.sex = :sex)
             AND (
                 (:age IS NULL AND rr.ageMinYears IS NULL AND rr.ageMaxYears IS NULL)
                 OR (:age IS NOT NULL
