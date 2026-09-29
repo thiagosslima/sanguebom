@@ -1,0 +1,54 @@
+package br.com.fiap.sanguebom.controller;
+
+import br.com.fiap.sanguebom.model.dtos.HealthProfileDTO;
+import br.com.fiap.sanguebom.service.HealthProfileService;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@Tag(name = "Perfil de Saúde", description = "API para gerenciamento de perfis de saúde")
+@RequestMapping(value = "/api/healthProfiles", produces = MediaType.APPLICATION_JSON_VALUE)
+public class HealthProfileResource {
+
+    private final HealthProfileService healthProfileService;
+
+    public HealthProfileResource(final HealthProfileService healthProfileService) {
+        this.healthProfileService = healthProfileService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<HealthProfileDTO>> getAllHealthProfiles() {
+        return ResponseEntity.ok(healthProfileService.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<HealthProfileDTO> getHealthProfile(
+            @PathVariable(name = "id") final Long id) {
+        return ResponseEntity.ok(healthProfileService.get(id));
+    }
+
+    @PostMapping
+    @ApiResponse(responseCode = "201")
+    public ResponseEntity<Long> createHealthProfile(
+            @RequestBody @Valid final HealthProfileDTO healthProfileDTO) {
+        final Long createdId = healthProfileService.create(healthProfileDTO);
+        return new ResponseEntity<>(createdId, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Long> updateHealthProfile(@PathVariable(name = "id") final Long id,
+                                                    @RequestBody @Valid final HealthProfileDTO healthProfileDTO) {
+        healthProfileService.update(id, healthProfileDTO);
+        return ResponseEntity.ok(id);
+    }
+}
+
+
+

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Filtro de exclusao do SpotBugs.
+
+  EI_EXPOSE_REP / EI_EXPOSE_REP2 acusam que um metodo devolve ou guarda a
+  referencia de um objeto mutavel em vez de uma copia. Numa aplicacao Spring
+  com JPA, os tres casos abaixo sao estruturais e nao tem correcao legitima:
+  copiar uma entidade gerenciada quebra a identidade e o lazy loading, e
+  copiar um bean singleton injetado nao faz sentido nenhum.
+
+  As exclusoes sao deliberadamente estreitas. Todo o resto do SpotBugs
+  continua ativo, e EI_EXPOSE_REP2 em SETTERS continua sendo reportado:
+  so a injecao via construtor esta dispensada.
+-->
+<FindBugsFilter>
+
+    <!-- 1. Entidades JPA e DTOs gerados pelo Lombok: devolver a referencia de
+         um List/Date de uma entidade e o comportamento esperado. -->
+    <Match>
+        <Package name="~br\.com\.fiap\.sanguebom\.model(\..*)?"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- 2. Injecao de dependencia por construtor: guardar a referencia do
+         colaborador recebido e exatamente o padrao do Spring. Restrito a
+         <init>, entao exposicao via setter continua sendo apontada. -->
+    <Match>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- 3. AchievementContext e um record que carrega entidades JPA
+         (AppUser, Exam, RiskAssessment) entre o motor de regras e as regras.
+         Os accessors do record devolvem as proprias entidades de proposito. -->
+    <Match>
+        <Class name="br.com.fiap.sanguebom.rulesMotor.achievement.AchievementContext"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+</FindBugsFilter>

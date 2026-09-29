@@ -82,6 +82,8 @@ build/
 *.env
 keys/
 *.pem
+*.key
+*api-key*
 
 #### AI Agents rules
 GEMINI.md
