@@ -2,9 +2,6 @@
 -- originalmente cadastradas com ALL em V20260821195000.
 -- As demais faixas ja usavam NULL e devem permanecer assim.
 -- Mantem as correcoes de CRITICO para HIGH em rule e exam_result.
---
--- ATENCAO: ALL nao e suportado pelo enum Sex nem pela busca atual do motor.
--- Esta reversao restaura os dados anteriores, mas tambem essa incompatibilidade.
 
 UPDATE public.reference_range AS rr
 SET sex = 'ALL'
